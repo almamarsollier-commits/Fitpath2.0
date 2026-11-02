@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Explorá actividades disponibles en FitPath.">
+  <title>FitPath | Actividades</title>
+  <link rel="stylesheet" href="../statics/css/fitpath.css">
+  <script src="../statics/js/fitpath.js" defer></script>
+</head>
+<body data-page="app">
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="inicio.html"><span class="brand-mark">f</span><span>fitpath<span class="brand-dot">.</span></span></a>
+      <div class="side-label">MENÚ PRINCIPAL</div>
+      <nav class="side-nav" aria-label="Navegación principal">
+        <a class="nav-link" href="inicio.html"><span class="nav-icon">⌂</span> Inicio</a>
+        <a class="nav-link is-current" href="buscador.html"><span class="nav-icon">⌕</span> Actividades</a>
+        <a class="nav-link" href="perfil.html"><span class="nav-icon">◉</span> Mi perfil</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-tip"><span class="tip-icon">✳</span><strong>Un recordatorio</strong><p>El progreso no es lineal. Seguí a tu ritmo.</p></div>
+        <button class="nav-link logout-button" type="button" data-logout><span class="nav-icon">↪</span> Cerrar sesión</button>
+        <div class="side-version">FITPATH · BASE 2.0</div>
+      </div>
+    </aside>
+    <div class="mobile-overlay" data-close-menu></div>
+    <main class="main-content">
+      <header class="topbar"><button class="menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle>☰</button><div class="breadcrumb">Tu espacio <span>/</span> <strong>Actividades</strong></div><a class="topbar-profile" href="perfil.html"><span class="avatar" data-avatar>U</span><span data-user-name>Tu perfil</span><span class="chevron">⌄</span></a></header>
+      <div class="page-wrap">
+        <section class="page-intro"><span class="eyebrow">MOVETE COMO TE GUSTA</span><h1>Encontrá tu próxima actividad<span class="brand-dot">.</span></h1><p>Probá algo nuevo o volvé a lo que te hace bien. Hay muchas formas de moverse.</p></section>
+        <section class="search-panel" aria-label="Filtros de actividades">
+          <div class="search-field"><label for="activity-search">Buscar actividad</label><input id="activity-search" type="search" placeholder="Ej. yoga, fuerza, spinning..."></div>
+          <div class="search-field"><label for="activity-type">Tipo de actividad</label><select id="activity-type"><option value="all">Todas las actividades</option><option value="cardio">Cardio</option><option value="fuerza">Fuerza</option><option value="bienestar">Bienestar</option><option value="agua">En el agua</option></select></div>
+          <button class="button button-primary search-button" id="clear-filters" type="button">Limpiar filtros</button>
+        </section>
+        <div class="results-header"><div><span class="eyebrow">PARA VOS</span><h2>Actividades para descubrir</h2></div><span class="results-count" id="results-count">6 opciones</span></div>
+        <section class="activity-grid" id="activity-grid">
+          <article class="activity-card" data-name="spinning" data-type="cardio"><div class="activity-art art-spinning"><span class="activity-symbol">↗</span><span class="activity-tag">ENERGÍA</span></div><div class="activity-info"><div class="activity-meta"><span>Cardio</span><span>45 min</span></div><h3>Spinning</h3><p>Pedaleá al ritmo de la música y liberá energía.</p><div class="activity-bottom"><span class="level-pill">Intensidad media/alta</span><button class="save-activity" type="button" aria-label="Guardar Spinning" aria-pressed="false">♡</button></div></div></article>
+          <article class="activity-card" data-name="yoga" data-type="bienestar"><div class="activity-art art-yoga"><span class="activity-symbol">☼</span><span class="activity-tag">EQUILIBRIO</span></div><div class="activity-info"><div class="activity-meta"><span>Bienestar</span><span>50 min</span></div><h3>Yoga</h3><p>Conectá respiración, movimiento y calma.</p><div class="activity-bottom"><span class="level-pill">Intensidad suave</span><button class="save-activity" type="button" aria-label="Guardar Yoga" aria-pressed="false">♡</button></div></div></article>
+          <article class="activity-card" data-name="entrenamiento de fuerza" data-type="fuerza"><div class="activity-art art-strength"><span class="activity-symbol">✳</span><span class="activity-tag">FUERZA</span></div><div class="activity-info"><div class="activity-meta"><span>Fuerza</span><span>60 min</span></div><h3>Entrenamiento de fuerza</h3><p>Construí fuerza y confianza paso a paso.</p><div class="activity-bottom"><span class="level-pill">Adaptable</span><button class="save-activity" type="button" aria-label="Guardar Entrenamiento de fuerza" aria-pressed="false">♡</button></div></div></article>
+          <article class="activity-card" data-name="pilates" data-type="bienestar"><div class="activity-art art-pilates"><span class="activity-symbol">◌</span><span class="activity-tag">CONTROL</span></div><div class="activity-info"><div class="activity-meta"><span>Bienestar</span><span>45 min</span></div><h3>Pilates</h3><p>Trabajá movilidad, postura y control corporal.</p><div class="activity-bottom"><span class="level-pill">Intensidad moderada</span><button class="save-activity" type="button" aria-label="Guardar Pilates" aria-pressed="false">♡</button></div></div></article>
+          <article class="activity-card" data-name="natación" data-type="agua"><div class="activity-art art-swim"><span class="activity-symbol">≈</span><span class="activity-tag">EN EL AGUA</span></div><div class="activity-info"><div class="activity-meta"><span>En el agua</span><span>40 min</span></div><h3>Natación</h3><p>Un entrenamiento completo con bajo impacto.</p><div class="activity-bottom"><span class="level-pill">Ritmo personal</span><button class="save-activity" type="button" aria-label="Guardar Natación" aria-pressed="false">♡</button></div></div></article>
+          <article class="activity-card" data-name="caminata activa" data-type="cardio"><div class="activity-art art-walk"><span class="activity-symbol">↗</span><span class="activity-tag">A TU RITMO</span></div><div class="activity-info"><div class="activity-meta"><span>Cardio</span><span>30 min</span></div><h3>Caminata activa</h3><p>Sumá movimiento de una forma simple y flexible.</p><div class="activity-bottom"><span class="level-pill">Intensidad suave</span><button class="save-activity" type="button" aria-label="Guardar Caminata activa" aria-pressed="false">♡</button></div></div></article>
+        </section>
+        <p id="empty-results" class="empty-state" hidden>No encontramos actividades con esos filtros. Probá con otra búsqueda.</p>
+        <footer class="app-footer">FitPath <span>·</span> Bienestar en movimiento</footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

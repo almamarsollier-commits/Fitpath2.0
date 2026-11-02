@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tu panel personal de FitPath.">
+  <title>FitPath | Inicio</title>
+  <link rel="stylesheet" href="../statics/css/fitpath.css">
+  <script src="../statics/js/fitpath.js" defer></script>
+</head>
+<body data-page="app">
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="inicio.html"><span class="brand-mark">f</span><span>fitpath<span class="brand-dot">.</span></span></a>
+      <div class="side-label">MENÚ PRINCIPAL</div>
+      <nav class="side-nav" aria-label="Navegación principal">
+        <a class="nav-link is-current" href="inicio.html"><span class="nav-icon">⌂</span> Inicio</a>
+        <a class="nav-link" href="buscador.html"><span class="nav-icon">⌕</span> Actividades</a>
+        <a class="nav-link" href="perfil.html"><span class="nav-icon">◉</span> Mi perfil</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-tip"><span class="tip-icon">✳</span><strong>Un recordatorio</strong><p>El progreso no es lineal. Seguí a tu ritmo.</p></div>
+        <button class="nav-link logout-button" type="button" data-logout><span class="nav-icon">↪</span> Cerrar sesión</button>
+        <div class="side-version">FITPATH · BASE 2.0</div>
+      </div>
+    </aside>
+    <div class="mobile-overlay" data-close-menu></div>
+    <main class="main-content">
+      <header class="topbar">
+        <button class="menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle>☰</button>
+        <div class="breadcrumb">Tu espacio <span>/</span> <strong>Inicio</strong></div>
+        <a class="topbar-profile" href="perfil.html"><span class="avatar" data-avatar>U</span><span data-user-name>Tu perfil</span><span class="chevron">⌄</span></a>
+      </header>
+      <div class="page-wrap">
+        <section class="welcome-banner">
+          <div class="welcome-copy"><span class="eyebrow eyebrow-light">TU CAMINO EMPIEZA ACÁ</span><h1>Hola, <span data-first-name>¡bienvenido/a!</span> <span class="wave">✳</span></h1><p>Hacé espacio para vos. Cada pequeño paso cuenta.</p><a class="button button-yellow" href="buscador.html">Explorar actividades <span>→</span></a></div>
+          <div class="welcome-art" aria-hidden="true"><div class="sun-shape"></div><div class="art-circle art-circle-one"></div><div class="art-circle art-circle-two"></div><div class="art-leaf">✳</div><div class="art-caption">MOVE<br>WITH<br>INTENTION</div></div>
+        </section>
+        <section class="section-block">
+          <div class="section-heading"><div><span class="eyebrow">EMPEZÁ POR VOS</span><h2>Tu bienestar, a tu manera</h2></div><a class="subtle-link" href="buscador.html">Ver todas las actividades <span>→</span></a></div>
+          <div class="feature-grid">
+            <article class="feature-card feature-mint"><div class="feature-icon">↗</div><span class="card-kicker">ENCONTRÁ TU RITMO</span><h3>Descubrí actividades</h3><p>Explorá opciones y elegí la que mejor encaje con vos.</p><a class="round-arrow" href="buscador.html" aria-label="Explorar actividades">↗</a></article>
+            <article class="feature-card feature-yellow"><div class="feature-icon">◎</div><span class="card-kicker">A TU PROPIO PASO</span><h3>Conocé tu perfil</h3><p>Actualizá tus datos y personalizá tu espacio.</p><a class="round-arrow" href="perfil.html" aria-label="Ir a mi perfil">↗</a></article>
+            <article class="feature-card feature-cream"><div class="feature-icon">✳</div><span class="card-kicker">HÁBITOS QUE SUMAN</span><h3>La constancia importa</h3><p>No hace falta hacerlo perfecto, solo volver a empezar.</p><span class="round-arrow round-arrow-static">✳</span></article>
+          </div>
+        </section>
+        <section class="section-block bottom-note"><div class="note-symbol">✳</div><div><h3>Tu objetivo no tiene que parecerse al de nadie más.</h3><p>Elegí lo que te haga bien, escuchá tu cuerpo y avanzá a tu ritmo.</p></div></section>
+        <footer class="app-footer">FitPath <span>·</span> Bienestar en movimiento</footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
