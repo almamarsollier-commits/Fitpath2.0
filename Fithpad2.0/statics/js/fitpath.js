@@ -1,42 +1,5 @@
 'use strict';
 
-/* Define las claves usadas para guardar los datos de demostración en el navegador. */
-const STORAGE_KEYS = {
-  users: 'fitpath_users_v2',
-  currentUser: 'fitpath_current_user_v2'
-};
-
-/* Lee un valor guardado como JSON y devuelve un valor alternativo si no existe o está dañado. */
-function readStorage(key, fallback) {
-  try {
-    const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : fallback;
-  } catch (error) {
-    return fallback;
-  }
-}
-
-/* Guarda un valor en el almacenamiento local y devuelve si la operación tuvo éxito. */
-function writeStorage(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-/* Obtiene la lista de cuentas de prueba registradas en este navegador. */
-function getUsers() {
-  return readStorage(STORAGE_KEYS.users, []);
-}
-
-/* Obtiene la cuenta que inició sesión en este navegador. */
-function getCurrentUser() {
-  return readStorage(STORAGE_KEYS.currentUser, null);
-}
-
-/* Muestra un mensaje accesible dentro del formulario indicado. */
 function showMessage(element, message, type) {
   if (!element) return;
   element.textContent = message;
@@ -44,7 +7,6 @@ function showMessage(element, message, type) {
   if (type) element.classList.add(type === 'success' ? 'message-success' : 'message-error');
 }
 
-/* Cambia entre el formulario de inicio de sesión y el formulario de registro. */
 function setAuthMode(mode) {
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
@@ -67,7 +29,6 @@ function setAuthMode(mode) {
   showMessage(document.getElementById('register-message'), '', '');
 }
 
-/* Registra los eventos de los botones y formularios de acceso. */
 function initializeAuthPage() {
   document.querySelectorAll('[data-auth-mode]').forEach(function (button) {
     button.addEventListener('click', function () {
@@ -78,7 +39,7 @@ function initializeAuthPage() {
   const registerForm = document.getElementById('register-form');
   const loginForm = document.getElementById('login-form');
 
-  registerForm.addEventListener('submit', function (event) {
+  registerForm.addEventListener('submit', async function (event) {
     event.preventDefault();
     const name = document.getElementById('register-name').value.trim();
     const email = document.getElementById('register-email').value.trim().toLowerCase();
@@ -94,48 +55,60 @@ function initializeAuthPage() {
       return;
     }
 
-    const users = getUsers();
-    if (users.some(function (user) { return user.email === email; })) {
-      showMessage(message, 'Ya existe una cuenta con ese correo. Iniciá sesión.', 'error');
-      return;
-    }
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, goal: 'Bienestar general' })
+      });
+      const data = await response.json();
 
-    const user = { name: name, email: email, password: password, goal: 'Bienestar general' };
-    users.push(user);
-    if (!writeStorage(STORAGE_KEYS.users, users)) {
-      showMessage(message, 'No se pudieron guardar los datos en este navegador. Revisá la configuración de almacenamiento.', 'error');
-      return;
+      if (!response.ok) {
+        showMessage(message, data.error || 'No se pudo registrar la cuenta.', 'error');
+        return;
+      }
+
+      sessionStorage.setItem('fitpath_current_user', JSON.stringify(data.user));
+      window.location.href = 'inicio.html';
+    } catch (err) {
+      showMessage(message, 'Error de conexión con el servidor.', 'error');
     }
-    writeStorage(STORAGE_KEYS.currentUser, { name: user.name, email: user.email, goal: user.goal });
-    window.location.href = 'inicio.html';
   });
 
-  loginForm.addEventListener('submit', function (event) {
+  loginForm.addEventListener('submit', async function (event) {
     event.preventDefault();
     const email = document.getElementById('login-email').value.trim().toLowerCase();
     const password = document.getElementById('login-password').value;
     const message = document.getElementById('login-message');
-    const user = getUsers().find(function (item) {
-      return item.email === email && item.password === password;
-    });
 
-    if (!user) {
-      showMessage(message, 'No encontramos una cuenta con esos datos. Revisá el correo y la contraseña o creá una cuenta.', 'error');
-      return;
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        showMessage(message, data.error || 'Correo o contraseña incorrectos.', 'error');
+        return;
+      }
+
+      sessionStorage.setItem('fitpath_current_user', JSON.stringify(data.user));
+      window.location.href = 'inicio.html';
+    } catch (err) {
+      showMessage(message, 'Error de conexión con el servidor.', 'error');
     }
-
-    writeStorage(STORAGE_KEYS.currentUser, { name: user.name, email: user.email, goal: user.goal || 'Bienestar general' });
-    window.location.href = 'inicio.html';
   });
 }
 
-/* Protege las páginas internas de la navegación accidental sin sesión y actualiza el saludo. */
 function initializeAppPage() {
-  const user = getCurrentUser();
-  if (!user) {
+  const userJson = sessionStorage.getItem('fitpath_current_user');
+  if (!userJson) {
     window.location.href = 'index.html';
     return;
   }
+  const user = JSON.parse(userJson);
 
   document.querySelectorAll('[data-user-name]').forEach(function (element) {
     element.textContent = user.name;
@@ -159,7 +132,6 @@ function initializeAppPage() {
   initializeProfileForm(user);
 }
 
-/* Abre y cierra el menú lateral en pantallas pequeñas. */
 function initializeMenu() {
   const sidebar = document.getElementById('sidebar');
   const toggle = document.querySelector('[data-menu-toggle]');
@@ -176,17 +148,15 @@ function initializeMenu() {
   });
 }
 
-/* Cierra la sesión local y devuelve al usuario a la pantalla de acceso. */
 function initializeLogout() {
   document.querySelectorAll('[data-logout]').forEach(function (button) {
     button.addEventListener('click', function () {
-      localStorage.removeItem(STORAGE_KEYS.currentUser);
+      sessionStorage.removeItem('fitpath_current_user');
       window.location.href = 'index.html';
     });
   });
 }
 
-/* Filtra las actividades por nombre y categoría y actualiza el contador de resultados. */
 function initializeActivitySearch() {
   const searchInput = document.getElementById('activity-search');
   const typeSelect = document.getElementById('activity-type');
@@ -234,7 +204,6 @@ function initializeActivitySearch() {
   });
 }
 
-/* Carga los datos del perfil y permite guardar los cambios en la cuenta local. */
 function initializeProfileForm(user) {
   const form = document.getElementById('profile-form');
   if (!form) return;
@@ -248,7 +217,7 @@ function initializeProfileForm(user) {
   emailInput.value = user.email || '';
   goalInput.value = user.goal || 'Bienestar general';
 
-  form.addEventListener('submit', function (event) {
+  form.addEventListener('submit', async function (event) {
     event.preventDefault();
     const newName = nameInput.value.trim();
     const newEmail = emailInput.value.trim().toLowerCase();
@@ -259,42 +228,31 @@ function initializeProfileForm(user) {
       return;
     }
 
-    const users = getUsers();
-    const duplicate = users.some(function (item) {
-      return item.email === newEmail && item.email !== user.email;
-    });
-    if (duplicate) {
-      showMessage(message, 'Ese correo ya está asociado a otra cuenta.', 'error');
-      return;
-    }
+    try {
+      const response = await fetch('/api/perfil', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldEmail: user.email, name: newName, email: newEmail, goal: newGoal })
+      });
+      const data = await response.json();
 
-    const storedUser = users.find(function (item) { return item.email === user.email; });
-    if (storedUser) {
-      storedUser.name = newName;
-      storedUser.email = newEmail;
-      storedUser.goal = newGoal;
-    }
+      if (!response.ok) {
+        showMessage(message, data.error || 'No se pudieron guardar los cambios.', 'error');
+        return;
+      }
 
-    const updatedUser = { name: newName, email: newEmail, goal: newGoal };
-    if (!writeStorage(STORAGE_KEYS.users, users) || !writeStorage(STORAGE_KEYS.currentUser, updatedUser)) {
-      showMessage(message, 'No se pudieron guardar los cambios en este navegador.', 'error');
-      return;
+      sessionStorage.setItem('fitpath_current_user', JSON.stringify(data.user));
+      showMessage(message, 'Tus cambios se guardaron correctamente en la base de datos.', 'success');
+      
+      document.querySelectorAll('[data-user-name], [data-profile-name]').forEach(element => element.textContent = newName);
+      document.querySelectorAll('[data-profile-email]').forEach(element => element.textContent = newEmail);
+      document.querySelectorAll('[data-avatar], [data-profile-avatar]').forEach(element => element.textContent = newName[0].toUpperCase());
+    } catch (err) {
+      showMessage(message, 'Error de conexión con el servidor.', 'error');
     }
-
-    showMessage(message, 'Tus cambios se guardaron correctamente.', 'success');
-    document.querySelectorAll('[data-user-name], [data-profile-name]').forEach(function (element) {
-      element.textContent = newName;
-    });
-    document.querySelectorAll('[data-profile-email]').forEach(function (element) {
-      element.textContent = newEmail;
-    });
-    document.querySelectorAll('[data-avatar], [data-profile-avatar]').forEach(function (element) {
-      element.textContent = newName[0].toUpperCase();
-    });
   });
 }
 
-/* Inicializa solo las funciones correspondientes a la página HTML actual. */
 document.addEventListener('DOMContentLoaded', function () {
   const page = document.body.dataset.page;
   if (page === 'auth') initializeAuthPage();
