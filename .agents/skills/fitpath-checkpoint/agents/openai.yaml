@@ -1,0 +1,4 @@
+interface:
+  display_name: "FitPath Checkpoint"
+  short_description: "Review FitPath changes and report checkpoint status"
+  default_prompt: "Use $fitpath-checkpoint to review this FitPath checkpoint."
