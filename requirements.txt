@@ -1,0 +1,4 @@
+Flask
+Authlib
+boto3
+python-dotenv
