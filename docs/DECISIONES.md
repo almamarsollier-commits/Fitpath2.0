@@ -25,8 +25,8 @@ Estas 15 decisiones se conservan sin cambios:
 6. **Pagos y deudas:** simplificar métodos y estados de pago, y eliminar relaciones circulares entre pagos y deudas, conservando la funcionalidad.
    **Diferencia:** el ER dibuja tablas separadas de métodos y estados; clases usa Pago y Deuda con estados; el SRS no fija ese detalle.
 
-7. **Máquinas:** MAQUINAS incorpora fk_sede.
-   **Diferencia:** el SRS dice que la sede del ticket se obtiene mediante el técnico y que la máquina no tiene sede directa; el ER tampoco muestra fk_sede. Se conserva el acuerdo y se registra la discrepancia.
+7. **Máquinas:** MAQUINAS incorpora fk_sede como referencia de ubicación.
+   **Aclaración:** el SRS dice que la sede del ticket se obtiene mediante el técnico y que la máquina no tiene sede directa; el ER tampoco muestra fk_sede. Se conserva el acuerdo aprobado y la contradicción queda documentada, sin modificar el PDF original.
 
 8. **Entrenador y teléfono:** ENTRENADOR incorpora especialidad; el teléfono se centraliza en USUARIOS.
    **Diferencia:** clases muestra especialidad en Entrenador y teléfono en Cliente; el ER no muestra especialidad ni teléfono.
@@ -52,6 +52,18 @@ Estas 15 decisiones se conservan sin cambios:
 15. **Personalización de rutinas:** utilizar parámetros individuales y observaciones del entrenador.
     **Diferencia:** el SRS requiere personalización y clases incluye observaciones en Rutina; el ER no representa explícitamente las observaciones del entrenador.
 
+### Acuerdos complementarios aprobados para el diseño del Bloque 2
+
+Estos acuerdos complementan y no reemplazan las 15 decisiones arquitectónicas anteriores:
+
+- ACTIVIDAD y SEDE tienen relación muchos a muchos mediante ACTIVIDAD_SEDE.
+- ENTRENADOR puede trabajar en varias sedes mediante ENTRENADOR_SEDE. Cada CLASE debe asociar el entrenador únicamente a una sede autorizada para ese entrenador.
+- Cada CLASE tiene inicio y fin concretos almacenados en UTC. Cada SEDE identifica su zona horaria. Horario continúa como modelo auxiliar sin tabla.
+- Cada cliente puede tener como máximo una membresía activa; se conserva su historial y se permiten pagos parciales vinculados a deudas.
+- REMUNERACIONES registra importe, moneda, clase relacionada y estado de liquidación. No se implementan pagos reales al personal.
+- Los datos sensibles se restringen por rol, sede, relación con el cliente y necesidad funcional. El rol Administrador no concede acceso indiscriminado a información privada.
+- Se conserva MAQUINAS.fk_sede como referencia de ubicación, conforme a la decisión arquitectónica 7. La contradicción del SRS se registra como aclaración; el PDF original no se modifica.
+
 ## 2. Decisiones funcionales aprobadas para el Bloque 1
 
 Estas ocho decisiones se aprueban para el MVP visual y no modifican los 15 acuerdos arquitectónicos:
@@ -62,7 +74,7 @@ Estas ocho decisiones se aprueban para el MVP visual y no modifican los 15 acuer
 4. La interfaz usa los nombres Gratuita y Premium.
 5. Alimentación, pagos y remuneraciones muestran datos simulados. No hay pagos reales ni persistencia/integración real en este bloque.
 6. Las decisiones arquitectónicas aprobadas prevalecen en su ámbito. Para requisitos funcionales, el SRS es la fuente principal; Story Mapping y diagramas complementan y verifican flujos. Las contradicciones se documentan.
-7. La revisión visual detallada de cardinalidades es obligatoria antes de implementar la base de datos en el Bloque 2.
+7. La revisión visual detallada de cardinalidades se realizó para preparar la propuesta del Bloque 2; la implementación sigue sujeta a la aprobación del esquema.
 8. El MVP es responsive, accesible, mantiene navegación consistente y usa HTML, CSS y JavaScript Vanilla.
 
 ## 3. Aplicación de fuentes y contradicciones relevantes
@@ -71,7 +83,7 @@ Estas ocho decisiones se aprueban para el MVP visual y no modifican los 15 acuer
 - **Mantenimiento del Administrador:** el SRS asigna la operación de tickets y cambios de estado al Técnico; el alcance aprobado incorpora supervisión para el Administrador. El panel de Administración muestra el estado y los tickets; las modificaciones quedan en el perfil Técnico.
 - **Nombres de membresía:** el caso de uso menciona Amateur/Pro y el SRS Gratuita/Premium. Para el Bloque 1 prevalece la decisión aprobada Gratuita/Premium; la diferencia de la fuente queda registrada.
 - **Identificador de acceso:** SRS, Story Mapping, casos de uso y ER no coinciden entre nombre de usuario y email. No bloquea el Bloque 1 porque no habrá autenticación real. Se resolverá antes del Bloque 3.
-- **Clases y cupos:** el modelo aprobado define ACTIVIDAD como tipo y CLASE como sesión; el cupo, horario e inscripción se presentan por Clase. Las cardinalidades físicas se revisan antes del Bloque 2.
+- **Clases y cupos:** el modelo aprobado define ACTIVIDAD como tipo y CLASE como sesión; el cupo, horario e inscripción se presentan por Clase. Las cardinalidades se revisaron visualmente al preparar la propuesta del Bloque 2; la implementación sigue pendiente de aprobación.
 - **Alimentación y pagos:** se consultan datos simulados; no se incorporan pagos reales, proveedores, backend ni persistencia en el Bloque 1.
 
 Estas reglas aplican la jerarquía funcional aprobada y el alcance explícito del usuario. No cambian los modelos arquitectónicos previos.
@@ -83,9 +95,16 @@ No bloquean el MVP visual:
 - Identificador de acceso y vínculo entre cuentas locales y Google OAuth: antes del Bloque 3.
 - Alta y asignación de perfiles del personal: antes de implementar autenticación y administración persistente.
 - Métodos, estados y proveedor de pagos reales: antes de implementar pagos persistentes.
-- Revisión visual de cardinalidades y relaciones de los diagramas: antes del esquema de base de datos del Bloque 2.
+- Revisión visual de cardinalidades y relaciones de los diagramas: completada para preparar la propuesta del Bloque 2; la implementación del esquema sigue pendiente de aprobación.
 - Verificación de concurrencia, tiempos de respuesta y disponibilidad: al definir backend y entorno de ejecución.
 - Alcance de archivos en S3, flujos de Calendar y agente de IA: antes de sus respectivos bloques.
+
+### Decisiones pendientes de aprobación para el esquema del Bloque 2
+
+- Eliminar SEDES.fk_administrador.
+- Eliminar MEMBRESIAS.fk_administrador.
+- Omitir la tabla ADMINISTRADORES y representar el rol mediante USUARIOS.fk_rol.
+- Aprobar el catálogo inicial de monedas y los vocabularios de estado propuestos para clases, membresías, pagos, tickets y liquidaciones.
 
 ## 5. Contexto arquitectónico aprobado en instrucciones previas
 
@@ -105,4 +124,4 @@ Este contexto proviene de AGENTS.md y acuerdos previos, no de los PDF.
 - [Diagrama de clases](<fuentes/Diagrama de clases.pdf>)
 - [Diagrama de relaciones entre entidades](<fuentes/Diagrama de RelacionesEntidades FP2.0-2026-11-04-195928.pdf>)
 
-La extracción de texto permite leer etiquetas, entidades y atributos. La ubicación exacta de algunas conexiones y cardinalidades requiere revisión visual y no se infiere aquí.
+La extracción de texto permitió leer etiquetas, entidades y atributos. La revisión visual de los diagramas complementó la verificación de relaciones y cardinalidades para elaborar la propuesta de docs/BLOQUE2_BD_PROPUESTA.md; el esquema todavía requiere aprobación.
