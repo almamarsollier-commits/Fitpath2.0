@@ -90,6 +90,15 @@ Reglas obligatorias:
 
 No modificar el historial anterior de FitPath sin autorización.
 
+### Convención obligatoria de commits
+
+- Usá únicamente estos prefijos: feat: para funcionalidades, fix: para errores, delete: para eliminaciones y doc: para documentación, instrucciones o planificación.
+- El título debe ser breve, descriptivo y estar en español.
+- No uses chore:, tarea: ni ningún otro prefijo sin consultarme.
+- Toda propuesta de commit debe incluir un cuerpo con las categorías aplicables: Archivos creados, Archivos modificados, Archivos eliminados y Motivo. En cada categoría describí solo rutas y cambios que pertenezcan al commit; no inventes cambios ni rutas.
+- Incluí únicamente las categorías que correspondan. Si hay muchos archivos generados, podés agruparlos.
+- Antes de cada commit, revisá el diff y el contenido preparado. Separá en commits distintos los cambios que no pertenezcan a la misma tarea.
+
 ## 6. Desarrollo por bloques
 
 Respetá el orden de implementación acordado en el roadmap.

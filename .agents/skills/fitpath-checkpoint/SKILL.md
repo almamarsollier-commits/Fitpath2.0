@@ -25,7 +25,13 @@ Usá esta skill cuando el usuario pida revisar un checkpoint al terminar una fun
 5. Localiza pruebas y verificaciones existentes relevantes. Ejecuta solo las que correspondan al cambio, sin instalarlas ni agregar nuevas. Informa comandos y resultados observados; explica las que no pudieron ejecutarse.
 6. Revisa los cambios y nombres de archivo buscando secretos y contenido que no deba versionarse, como `.env`, bases locales, `node_modules`, entornos virtuales, cachés o artefactos generados. Si hay un escáner local disponible, úsalo con redacción completa y sin validación externa; no lo instales. Ante una coincidencia que pueda ser un secreto, informa tipo y ubicación sin mostrar el valor.
 7. Propón el texto breve que correspondería a `docs/ESTADO.md`. Propón cambios en `docs/ROADMAP.md` solo si cambió el avance o el alcance acordado, y en `docs/DECISIONES.md` solo si hay una decisión nueva. Si un archivo no existe, indícalo; no lo crees.
-8. Sugiere un mensaje de commit descriptivo que represente los cambios reales. No prepares ni crees el commit.
+8. Sugiere un título y un cuerpo para el commit según la convención de AGENTS.md. Revisá el diff y el contenido antes de proponerlo. El título debe ser breve, descriptivo, en español y empezar con feat:, fix:, delete: o doc:, según corresponda. No uses chore:, tarea: ni otro prefijo sin consultar.
+   Incluí en el cuerpo solo las categorías aplicables:
+   - Archivos creados: rutas y para qué se agregaron.
+   - Archivos modificados: rutas y qué cambió.
+   - Archivos eliminados: rutas y por qué se quitaron.
+   - Motivo: por qué eran necesarios los cambios.
+   No inventes cambios ni menciones rutas ajenas al commit. Podés agrupar muchos archivos generados. Separá propuestas cuando los cambios pertenezcan a tareas distintas. No prepares ni crees el commit.
 
 ## Formato de respuesta
 
