@@ -7,9 +7,9 @@
 
 ## Estado de Git
 
-- La Microtarea 3 comenzó desde el commit ff9ebb520e7b55a03397799e795f7d7e02aec95d, publicado en origin/fitpath.
+- La Microtarea 4 comenzó desde el commit 7c130c94031c3344120b3a22ec83fcf35bbaa71e; fitpath y origin/fitpath estaban sincronizadas.
 - docs/referencias-visuales/ ya estaba sin seguimiento y se conserva intacta.
-- No se realizó push durante esta microtarea.
+- No se realizó push. El cierre de la Microtarea 4 se registra en commit local.
 - No se instalaron dependencias.
 
 ## Estado por bloque
@@ -32,18 +32,22 @@ La Microtarea 3 agrega la migración 0002 con entrenadores, entrenador_sede, act
 
 El usuario confirmó que la suite unittest completa de las Microtareas 1 a 3 se ejecutó satisfactoriamente desde su terminal de VS Code, sin errores. En el entorno de Codex no se pudo importar Flask para repetirla.
 
+La Microtarea 4 agrega la migración 0003 para clientes, inscripciones y asistencias, junto con un servicio interno transaccional de inscripción y pruebas con bases temporales. El servicio comprueba cliente, clase futura programada, actividad habilitada, entrenador activo, duplicados y cupos mediante BEGIN IMMEDIATE. No valida membresías ni autorización de un entrenador autenticado y no tiene endpoint.
+
+El usuario confirmó que la suite automatizada completa de la Microtarea 4 se ejecutó satisfactoriamente desde su terminal de VS Code, sin informar cantidades. En esta sesión no pudo repetirse por la ausencia de Flask; la validación aislada con SQLite y biblioteca estándar comprobó migraciones, transacciones, concurrencia y claves foráneas.
+
 SQLite verifica el formato canónico UTC y el orden de inicio/fin. La conversión entre la zona horaria IANA de la sede, UTC, disponibilidad semanal y conflictos horarios requiere lógica de servicio. La base tampoco impone solapamientos entre disponibilidades. La compatibilidad entre usuarios.rol_id y el perfil Entrenador permanece pendiente; la FK de entrenadores solo verifica que exista el usuario.
 
 apy.py, server.js y gimnasio.db no se modificaron ni ejecutaron. Las pruebas usan bases temporales; la nueva migración opera sobre la conexión que recibe y conserva las relaciones históricas con ON DELETE RESTRICT.
 
-No se implementaron inscripciones, asistencias, reservas, membresías, pagos, autenticación, autorización real ni endpoints privados.
+No se implementaron reservas completas, membresías, pagos, autenticación, autorización real ni endpoints privados. La Microtarea 4 ofrece solo una operación interna de inscripción, sin HTTP ni elegibilidad por membresía.
 
 ## Decisiones aprobadas y pendientes
 
 Siguen vigentes las 15 decisiones arquitectónicas originales y los acuerdos complementarios. También permanecen registradas las cuatro aprobaciones recientes del modelo.
 
-Continúan pendientes: compatibilidad entre rol y perfil Entrenador; conversión entre horarios locales y UTC; solapamientos de disponibilidad; tratamiento de clases futuras al desactivar un entrenador de una sede; y normalización Unicode de nombres de actividades. También siguen pendientes las decisiones sobre remuneraciones por clase, beneficios de membresías e identificador de inicio de sesión.
+Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membresía; autorización del entrenador para registrar asistencia; tratamiento de clases e inscripciones canceladas; conversión de horarios locales a UTC; solapamientos de disponibilidad; y normalización Unicode de nombres de actividades.
 
 ## Próximo paso
 
-La Microtarea 3 fue validada y cerrada con commit local; la siguiente microtarea no se inició.
+La Microtarea 4 fue validada por el usuario y se cierra con commit local. La Microtarea 5 no se inició.

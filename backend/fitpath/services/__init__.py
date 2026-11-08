@@ -1,0 +1,1 @@
+"""Servicios internos de FitPath, sin registrar endpoints HTTP."""

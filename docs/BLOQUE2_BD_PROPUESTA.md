@@ -1,6 +1,6 @@
 # FitPath 2.0 — Bloque 2: propuesta de base de datos
 
-**Estado:** Microtarea 3 implementada y validada por el usuario mediante la suite completa de unittest ejecutada desde VS Code. Inscripciones, asistencias y módulos posteriores siguen pendientes.
+**Estado:** Microtarea 4 implementada y validada por el usuario mediante la suite completa ejecutada desde VS Code. El servicio de inscripción es interno y no sustituye la autorización por membresía ni por identidad autenticada.
 
 **Fecha:** 2026-11-08
 
@@ -8,7 +8,7 @@
 
 **Base anterior:** gimnasio.db queda fuera del diseño y no se migrará ni modificará.
 
-Esta propuesta conserva las 15 decisiones arquitectónicas y los acuerdos complementarios aprobados en DECISIONES.md. La Microtarea 1 agregó infraestructura, registro de migraciones y configuración; la Microtarea 2 agregó identidad, roles, permisos y sedes. La Microtarea 3 incorpora las seis tablas de actividades, entrenadores y programación descritas abajo, sin inscripciones, asistencias ni endpoints.
+Esta propuesta conserva las 15 decisiones arquitectónicas y los acuerdos complementarios aprobados en DECISIONES.md. Las Microtareas 1 a 3 incorporaron infraestructura, identidad, sedes, actividades, entrenadores y clases. La Microtarea 4 agrega clientes, inscripciones, asistencias y un servicio interno sin endpoints.
 
 ## Convenciones del esquema
 
@@ -28,7 +28,7 @@ Esta propuesta conserva las 15 decisiones arquitectónicas y los acuerdos comple
 - **permisos** — id_permiso INTEGER PRIMARY KEY; clave TEXT NOT NULL COLLATE NOCASE UNIQUE, no vacía; descripcion TEXT opcional. La tabla está implementada; el catálogo permanece vacío hasta aprobar permisos concretos.
 - **rol_permiso** — rol_id INTEGER NOT NULL FK → roles; permiso_id INTEGER NOT NULL FK → permisos; PRIMARY KEY (rol_id, permiso_id). Implementada y vacía; no se asignan permisos por defecto.
 - **usuarios** — id_usuario INTEGER PRIMARY KEY; nombre y apellido TEXT NOT NULL; nombre_usuario TEXT NOT NULL COLLATE NOCASE UNIQUE; email TEXT NOT NULL COLLATE NOCASE UNIQUE; telefono TEXT opcional; rol_id INTEGER NOT NULL FK → roles; activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0,1)). Campos requeridos no vacíos y sin espacios externos. Email y nombre de usuario se almacenan recortados y en minúscula ASCII. No contiene contraseña ni hash; la autenticación corresponde al Bloque 3.
-- **clientes** — id_cliente INTEGER PRIMARY KEY; usuario_id INTEGER NOT NULL UNIQUE FK → usuarios.
+- **clientes** — id_cliente INTEGER PRIMARY KEY; usuario_id INTEGER NOT NULL UNIQUE FK → usuarios. Implementada en 0003, sin duplicar datos del usuario. La compatibilidad entre usuarios.rol_id y el perfil Cliente sigue pendiente.
 - **jefes_sede** — id_jefe_sede INTEGER PRIMARY KEY; usuario_id INTEGER NOT NULL UNIQUE FK → usuarios; sede_id INTEGER NOT NULL FK → sedes.
 - **entrenadores** — id_entrenador INTEGER PRIMARY KEY; usuario_id INTEGER NOT NULL UNIQUE FK → usuarios; especialidad TEXT NOT NULL, no vacía y recortada. Implementada en 0002. La FK no comprueba que usuarios.rol_id sea Entrenador: esa compatibilidad permanece pendiente.
 - **entrenador_sede** — entrenador_id INTEGER NOT NULL FK → entrenadores; sede_id INTEGER NOT NULL FK → sedes; activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0,1)); PRIMARY KEY (entrenador_id, sede_id). Implementada como relación N:M.
@@ -44,8 +44,8 @@ El perfil Jefe de sede y el perfil Técnico se asocian a una sede y siguen pendi
 - **actividad_sede** — actividad_id INTEGER NOT NULL FK → actividades; sede_id INTEGER NOT NULL FK → sedes; habilitada INTEGER NOT NULL DEFAULT 1 CHECK (habilitada IN (0,1)); PRIMARY KEY (actividad_id, sede_id). Implementada como relación N:M.
 - **clases** — id_clase INTEGER PRIMARY KEY; actividad_id, sede_id y entrenador_id INTEGER NOT NULL; inicio_utc y fin_utc TEXT NOT NULL en UTC canónico YYYY-MM-DDTHH:MM:SSZ; cupo_maximo INTEGER NOT NULL CHECK (cupo_maximo > 0); estado TEXT NOT NULL CHECK (estado IN ('programada','cancelada','realizada')). FK compuestas (actividad_id, sede_id) → actividad_sede y (entrenador_id, sede_id) → entrenador_sede; CHECK (fin_utc > inicio_utc). Implementada en 0002.
 - **disponibilidad_entrenador** — id_disponibilidad INTEGER PRIMARY KEY; entrenador_id y sede_id INTEGER NOT NULL; dia_semana INTEGER NOT NULL CHECK (dia_semana BETWEEN 1 AND 7); hora_inicio y hora_fin TEXT NOT NULL con formato local HH:MM de 00:00 a 23:59; UNIQUE (entrenador_id, sede_id, dia_semana, hora_inicio, hora_fin); FK compuesta (entrenador_id, sede_id) → entrenador_sede; CHECK (hora_fin > hora_inicio). Implementada como recurrencia semanal. No admite intervalos que crucen medianoche; solapamientos se validan en el servicio.
-- **inscripciones** — id_inscripcion INTEGER PRIMARY KEY; cliente_id INTEGER NOT NULL FK → clientes; clase_id INTEGER NOT NULL FK → clases; fecha_utc TEXT NOT NULL; estado TEXT NOT NULL CHECK (estado IN ('activa','cancelada')). Índice único parcial por (cliente_id, clase_id) WHERE estado='activa'.
-- **asistencias** — id_asistencia INTEGER PRIMARY KEY; inscripcion_id INTEGER NOT NULL UNIQUE FK → inscripciones; fecha_utc TEXT NOT NULL; estado TEXT NOT NULL CHECK (estado IN ('presente','ausente')).
+- **inscripciones** — id_inscripcion INTEGER PRIMARY KEY; cliente_id INTEGER NOT NULL FK → clientes; clase_id INTEGER NOT NULL FK → clases; fecha_utc TEXT NOT NULL en formato UTC canónico; estado TEXT NOT NULL CHECK (estado IN ('activa','cancelada')). Índice UNIQUE parcial por (cliente_id, clase_id) WHERE estado='activa' e índices para consultar por cliente y clase. Implementada en 0003.
+- **asistencias** — id_asistencia INTEGER PRIMARY KEY; inscripcion_id INTEGER NOT NULL UNIQUE FK → inscripciones; fecha_utc TEXT NOT NULL en formato UTC canónico; estado TEXT NOT NULL CHECK (estado IN ('presente','ausente')). Implementada en 0003; no duplica cliente, clase ni entrenador. La autorización del entrenador queda pendiente.
 
 La clase referencia directamente actividad, sede y entrenador. Las FK compuestas impiden combinar una actividad-sede o entrenador-sede inexistentes. Triggers rechazan insertar o reasignar una clase cuando la actividad no está habilitada en la sede o el vínculo entrenador-sede no está activo. Desactivar un vínculo no elimina clases existentes; el ciclo de cancelación o conservación histórica deberá tratarse en servicios. La base no comprueba solapamientos ni convierte la hora UTC a la zona IANA de la sede; esos controles corresponden al backend. La disponibilidad semanal queda registrada, pero su compatibilidad con cada clase se validará en el servicio. El cupo disponible no se almacena como contador duplicado.
 
@@ -89,7 +89,7 @@ Una deuda tiene cero o muchos pagos parciales. El saldo se deriva de pagos reali
 - Rol 1:N usuarios; usuario 1:0..1 perfil de cliente, jefe de sede, entrenador o técnico. La coherencia rol-perfil se valida en el servicio.
 - Actividad N:M sede mediante actividad_sede; entrenador N:M sede mediante entrenador_sede.
 - Actividad/sede 1:N clases y entrenador/sede 1:N clases. Cada clase pertenece a una combinación autorizada en ambas relaciones.
-- Clase 1:N inscripciones; inscripción 1:0..1 asistencia. Se permite conservar filas canceladas y reactivar mediante una inscripción nueva.
+- Clase 1:N inscripciones; inscripción 1:0..1 asistencia. Se conservan filas canceladas y se impide más de una inscripción activa para el mismo cliente y clase. El flujo de cancelación de clases e inscripciones queda pendiente de revisión de negocio.
 - Tipo de objetivo 1:N objetivos; clientes N:M objetivos mediante cliente_objetivo.
 - Cliente 1:N rutinas, progreso, planes de alimentación y suscripciones; entrenador 1:N rutinas.
 - Rutina N:M ejercicios mediante rutina_ejercicio, con orden y parámetros por instancia.
@@ -101,9 +101,9 @@ Una deuda tiene cero o muchos pagos parciales. El saldo se deriva de pagos reali
 
 - Activar claves foráneas en cada conexión y ejecutar PRAGMA foreign_key_check en verificaciones de esquema. Triggers protegen invariantes entre filas, como la sede compartida por ticket, máquina y técnico.
 - Índices únicos parciales impiden más de una inscripción activa al mismo par cliente/clase y más de una membresía activa por cliente. SQLite permite índices UNIQUE parciales con cláusula WHERE.
-- Reserva: BEGIN IMMEDIATE; validar que la clase futura esté programada y habilitada, comprobar la membresía requerida, comprobar relación cliente-clase y cupo; insertar; confirmar. La transacción y el índice único previenen carreras, duplicados y sobrecupo.
+- Inscripción interna M4: BEGIN IMMEDIATE; comprobar clase futura programada, actividad habilitada, entrenador activo, duplicado y cupo; insertar y confirmar. El servicio no valida elegibilidad de membresía ni identidad/autorización del solicitante, y no se expone por HTTP o el selector demo. Una reserva completa requiere resolver esos controles antes de habilitar operaciones externas.
 - Pagos parciales: dentro de una transacción, sumar pagos realizados, rechazar importe mayor al saldo, insertar pago y confirmar estado/fecha. No existe CHECK SQL que valide una suma entre filas; esa regla se prueba en el servicio y con solicitudes concurrentes.
-- Asistencia: el entrenador debe ser el asignado a la clase y el cliente debe tener inscripción activa; se valida en el backend.
+- Asistencia: el esquema conserva una única fila por inscripción. Antes de habilitar su registro, un servicio debe validar inscripción activa, estado de la clase y autorización del entrenador autenticado; no existe operación HTTP para asistencia.
 - Los vocabularios aprobados se aplicarán en las migraciones de negocio. La Microtarea 2 solo crea las cinco tablas de identidad y sedes, sin perfiles ni módulos funcionales.
 - No se eliminan en cascada pagos, asistencias, remuneraciones ni historial de mantenimiento.
 
@@ -136,8 +136,9 @@ La factory create_app configura el entorno y registra solo blueprints permitidos
 ## Migraciones y datos iniciales
 
 - 0001_identidad_roles_permisos_sedes.sql — implementada: roles, permisos, rol_permiso, usuarios y sedes.
-- 0002_actividades_entrenadores_clases.sql — implementada: entrenadores, entrenador_sede, actividades, actividad_sede, disponibilidad_entrenador y clases. No crea inscripciones ni asistencias.
-- Las migraciones posteriores de perfiles restantes y módulos de negocio siguen pendientes; su orden y alcance respetarán las dependencias y decisiones abiertas.
+- 0002_actividades_entrenadores_clases.sql — implementada: entrenadores, entrenador_sede, actividades, actividad_sede, disponibilidad_entrenador y clases.
+- 0003_clientes_inscripciones_asistencias.sql — implementada: clientes, inscripciones y asistencias.
+- Las migraciones posteriores de perfiles restantes, membresías/beneficios y otros módulos de negocio siguen pendientes; su orden respetará las dependencias y decisiones abiertas.
 - La tabla técnica schema_migrations guarda versión, nombre, checksum e instante UTC; cada archivo SQL se registra dentro de su transacción.
 - backend/fitpath/seeds.py y los comandos python -m backend.seed --environment development o python -m backend.seed --environment testing cargan explícitamente los cinco roles. No se ejecutan con la factory ni con migraciones; no siembran usuarios, permisos ni credenciales.
 - SQLite NOCASE y lower() solo realizan conversión de mayúsculas ASCII. El esquema exige texto recortado y minúscula ASCII para emails y nombres de usuario, pero no puede garantizar equivalencia/casefold Unicode frente a escrituras directas. Las escrituras futuras del servidor deben normalizar con NFC/casefold; si se requiere garantía también ante SQL directo, habrá que aprobar una collation/función SQLite registrada o una restricción de caracteres.
@@ -167,15 +168,19 @@ La factory create_app configura el entorno y registra solo blueprints permitidos
 
 - La cantidad de remuneraciones permitidas por clase y su regla para evitar duplicados.
 - Cómo los beneficios de una membresía habilitan clases o actividades.
+- Elegibilidad por membresía antes de una inscripción y autorización del entrenador autenticado para registrar asistencia.
+- Tratamiento de clases e inscripciones canceladas más allá de conservar filas históricas.
+- Conversión de horarios locales a UTC, solapamientos de disponibilidad y normalización Unicode del catálogo de actividades.
 - Cómo asegurar desde la base la correspondencia entre usuarios.rol_id y sus tablas de perfil.
 - Email, nombre de usuario o ambos como identificador de inicio de sesión, antes del Bloque 3.
 
-Estas decisiones continúan pendientes y no se resuelven por inferencia en las Microtareas 1 a 3.
+Estas decisiones continúan pendientes y no se resuelven por inferencia en las Microtareas 1 a 4.
 
 ## Microtareas del Bloque 2
 
 1. **Infraestructura Flask y SQLite — completada.** Factory, configuraciones separadas, conexión y runner versionado.
 2. **Identidad, roles, permisos y sedes — completada.** Migración 0001, seed controlado y pruebas.
-3. **Actividades, entrenadores y programación de clases — implementada y validada.** Migración 0002, disponibilidad y clases con validaciones referenciales; la suite completa fue confirmada como satisfactoria por el usuario. No incluye inscripciones, asistencias ni APIs privadas.
+3. **Actividades, entrenadores y programación de clases — implementada y validada.** Migración 0002, disponibilidad y clases con validaciones referenciales.
+4. **Clientes, inscripciones, asistencias y control de cupos — implementada y validada.** Migración 0003 y servicio interno sin endpoints; la suite completa fue confirmada como satisfactoria por el usuario. Membresía y autorización siguen pendientes.
 
-**Próximo paso:** la Microtarea 3 fue revisada y validada; la siguiente microtarea no se inició.
+**Próximo paso:** la Microtarea 4 se cierra con commit local; la Microtarea 5 no se inició.

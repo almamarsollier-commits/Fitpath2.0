@@ -22,7 +22,7 @@ class ActivityClassSchemaTests(unittest.TestCase):
         self.connection = connect_database(self.root / "activities.sqlite3")
         self.addCleanup(self.connection.close)
 
-        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2))
+        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2, 3))
         seed_initial_roles(self.connection)
 
         role_id = self.connection.execute(
@@ -136,7 +136,7 @@ class ActivityClassSchemaTests(unittest.TestCase):
             ),
         ).lastrowid
 
-    def test_migration_creates_only_the_six_scheduled_activity_tables(self):
+    def test_migrations_create_activity_and_enrollment_tables(self):
         tables = {
             row[0]
             for row in self.connection.execute(
@@ -159,6 +159,9 @@ class ActivityClassSchemaTests(unittest.TestCase):
                 "actividad_sede",
                 "clases",
                 "disponibilidad_entrenador",
+                "clientes",
+                "inscripciones",
+                "asistencias",
             },
         )
         self.assertEqual(
@@ -171,16 +174,10 @@ class ActivityClassSchemaTests(unittest.TestCase):
             (
                 (1, "0001_identidad_roles_permisos_sedes.sql"),
                 (2, "0002_actividades_entrenadores_clases.sql"),
+                (3, "0003_clientes_inscripciones_asistencias.sql"),
             ),
         )
-        self.assertNotIn(
-            "inscripciones",
-            tables,
-        )
-        self.assertNotIn(
-            "asistencias",
-            tables,
-        )
+        self.assertTrue({"clientes", "inscripciones", "asistencias"}.issubset(tables))
 
     def test_trainer_profile_and_class_constraints_are_enforced(self):
         with self.assertRaises(sqlite3.IntegrityError):
@@ -414,7 +411,7 @@ class ActivityClassSchemaTests(unittest.TestCase):
         self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), ())
         self.assertEqual(
             self.connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0],
-            2,
+            3,
         )
         self.assertEqual(
             self.connection.execute("PRAGMA foreign_key_check").fetchall(),

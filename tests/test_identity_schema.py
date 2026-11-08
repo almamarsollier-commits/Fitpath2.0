@@ -28,7 +28,7 @@ class IdentitySchemaTests(unittest.TestCase):
         self.database_path = self.root / "identity.sqlite3"
         self.connection = connect_database(self.database_path)
         self.addCleanup(self.connection.close)
-        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2))
+        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2, 3))
 
     def insert_role(self, name="Cliente"):
         cursor = self.connection.execute(
@@ -222,7 +222,7 @@ class IdentitySchemaTests(unittest.TestCase):
             0,
         )
 
-    def test_migrations_are_idempotent_and_registry_records_one_version(self):
+    def test_migrations_are_idempotent_and_registry_records_all_versions(self):
         self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), ())
         self.assertEqual(
             tuple(
@@ -234,11 +234,12 @@ class IdentitySchemaTests(unittest.TestCase):
             (
                 (1, "0001_identidad_roles_permisos_sedes.sql"),
                 (2, "0002_actividades_entrenadores_clases.sql"),
+                (3, "0003_clientes_inscripciones_asistencias.sql"),
             ),
         )
         self.assertEqual(
             self.connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0],
-            2,
+            3,
         )
 
     def test_altered_applied_migration_is_rejected_by_checksum(self):
