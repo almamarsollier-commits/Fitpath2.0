@@ -7,9 +7,9 @@
 
 ## Estado de Git
 
-- La Microtarea 2 comenzó desde el commit 958df4dd21e16221537cc06e4225e996bcc5cbce; al inicio, fitpath y origin/fitpath estaban sincronizadas.
+- La Microtarea 3 comenzó desde el commit ff9ebb520e7b55a03397799e795f7d7e02aec95d, publicado en origin/fitpath.
 - docs/referencias-visuales/ ya estaba sin seguimiento y se conserva intacta.
-- No se realizaron commits ni pushes.
+- No se realizó push durante esta microtarea.
 - No se instalaron dependencias.
 
 ## Estado por bloque
@@ -24,24 +24,26 @@ Parcialmente implementado. Están disponibles la landing pública, el shell visu
 
 ### Bloque 2 — Base de datos, Flask y APIs REST
 
-La Microtarea 1 agregó la infraestructura Flask/SQLite, la factory create_app(), configuraciones separadas, conexión bajo demanda con PRAGMA foreign_keys, y un migrador SQL versionado con registro de versión, checksum, transacción por migración y comprobación referencial. Su suite de cinco pruebas fue ejecutada por el usuario desde VS Code con Python 3.15.2 y aprobada.
+La Microtarea 1 agregó la infraestructura Flask/SQLite y el migrador versionado. El usuario informó cinco pruebas aprobadas con Python 3.15.2 desde VS Code.
 
-La Microtarea 2 agrega la migración 0001_identidad_roles_permisos_sedes.sql con las tablas roles, permisos, rol_permiso, usuarios y sedes. Incluye claves foráneas, restricciones e índices. Los cinco roles tienen una carga idempotente separada. Puede invocarse con python -m backend.seed --environment development o python -m backend.seed --environment testing; no se cargan usuarios ni permisos y no hay endpoints registrados.
+La Microtarea 2 agregó roles, permisos, usuarios y sedes en la migración 0001, y una carga controlada de los cinco roles. El usuario confirmó que las pruebas automatizadas de las Microtareas 1 y 2 se ejecutaron satisfactoriamente desde su terminal de VS Code.
 
-Se agregó una suite específica para estas tablas, que usa bases temporales y cubre relaciones, unicidad, validaciones, seed, checksums, rollback, aislamiento de entornos y protección de gimnasio.db. El usuario confirmó que las pruebas automatizadas de las Microtareas 1 y 2 se ejecutaron satisfactoriamente desde su terminal de VS Code; no se consigna un conteo para la suite combinada porque no fue informado. En esta sesión Codex no ejecutó la suite completa por falta de Flask en su intérprete. Una validación separada con SQLite y bases temporales confirmó esquema, claves foráneas, seed, idempotencia, unicidad, rollback y checksum.
+La Microtarea 3 agrega la migración 0002 con entrenadores, entrenador_sede, actividades, actividad_sede, clases y disponibilidad_entrenador. Incluye relaciones compuestas, restricciones para horarios/cupos/estados, índices y triggers que impiden asignar nuevas clases a actividades no habilitadas o entrenadores sin vínculo activo en la sede. Se actualizaron las pruebas de identidad para contemplar el esquema acumulado y se añadió una suite temporal para esta microtarea. No se agregaron inscripciones, asistencias, endpoints ni autenticación.
 
-El esquema persiste nombres de usuario y emails recortados y en minúscula ASCII. La collation NOCASE y lower() incorporados en SQLite solo cubren ASCII; la normalización Unicode NFC/casefold debe aplicarse en el servidor cuando existan escrituras y autenticación. El identificador de inicio de sesión sigue pendiente.
+El usuario confirmó que la suite unittest completa de las Microtareas 1 a 3 se ejecutó satisfactoriamente desde su terminal de VS Code, sin errores. En el entorno de Codex no se pudo importar Flask para repetirla.
 
-apy.py, server.js y gimnasio.db no se modificaron ni ejecutaron. El backend nuevo conserva la protección que rechaza la ruta exacta de gimnasio.db; las nuevas pruebas incluyen una comprobación de metadatos antes y después del rechazo. No se crearon bases locales dentro del repositorio.
+SQLite verifica el formato canónico UTC y el orden de inicio/fin. La conversión entre la zona horaria IANA de la sede, UTC, disponibilidad semanal y conflictos horarios requiere lógica de servicio. La base tampoco impone solapamientos entre disponibilidades. La compatibilidad entre usuarios.rol_id y el perfil Entrenador permanece pendiente; la FK de entrenadores solo verifica que exista el usuario.
 
-No se implementaron perfiles, autenticación, permisos efectivos, endpoints sensibles ni tablas de clases, membresías, pagos o remuneraciones.
+apy.py, server.js y gimnasio.db no se modificaron ni ejecutaron. Las pruebas usan bases temporales; la nueva migración opera sobre la conexión que recibe y conserva las relaciones históricas con ON DELETE RESTRICT.
+
+No se implementaron inscripciones, asistencias, reservas, membresías, pagos, autenticación, autorización real ni endpoints privados.
 
 ## Decisiones aprobadas y pendientes
 
-Siguen vigentes las 15 decisiones arquitectónicas originales y los acuerdos complementarios. También están registradas las cuatro aprobaciones más recientes: omitir referencias y tabla de administradores, iniciar moneda con ARS y conservar vocabularios de estados diferenciados.
+Siguen vigentes las 15 decisiones arquitectónicas originales y los acuerdos complementarios. También permanecen registradas las cuatro aprobaciones recientes del modelo.
 
-Continúan pendientes las decisiones sobre remuneraciones por clase, beneficios de membresías, compatibilidad de roles y perfiles ante escrituras directas, e identificador de inicio de sesión para el Bloque 3. No se cerraron mediante esta microtarea.
+Continúan pendientes: compatibilidad entre rol y perfil Entrenador; conversión entre horarios locales y UTC; solapamientos de disponibilidad; tratamiento de clases futuras al desactivar un entrenador de una sede; y normalización Unicode de nombres de actividades. También siguen pendientes las decisiones sobre remuneraciones por clase, beneficios de membresías e identificador de inicio de sesión.
 
 ## Próximo paso
 
-La Microtarea 2 quedó validada por el usuario y está lista para registrar en un commit local. La Microtarea 3 no se inició.
+La Microtarea 3 fue validada y cerrada con commit local; la siguiente microtarea no se inició.

@@ -28,7 +28,7 @@ class IdentitySchemaTests(unittest.TestCase):
         self.database_path = self.root / "identity.sqlite3"
         self.connection = connect_database(self.database_path)
         self.addCleanup(self.connection.close)
-        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1,))
+        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2))
 
     def insert_role(self, name="Cliente"):
         cursor = self.connection.execute(
@@ -47,7 +47,7 @@ class IdentitySchemaTests(unittest.TestCase):
             ("Ana", "Pérez", username, email, role_id),
         ).lastrowid
 
-    def test_creates_five_expected_tables_and_valid_foreign_keys(self):
+    def test_initial_identity_tables_remain_present_with_valid_foreign_keys(self):
         tables = {
             row[0]
             for row in self.connection.execute(
@@ -55,17 +55,16 @@ class IdentitySchemaTests(unittest.TestCase):
                 ("table",),
             )
         }
-        self.assertEqual(
-            tables,
-            {
-                "schema_migrations",
-                "roles",
-                "permisos",
-                "rol_permiso",
-                "usuarios",
-                "sedes",
-            },
-        )
+        expected_tables = {
+            "schema_migrations",
+            "roles",
+            "permisos",
+            "rol_permiso",
+            "usuarios",
+            "sedes",
+        }
+        self.assertTrue(expected_tables.issubset(tables))
+        self.assertNotIn("administradores", tables)
         self.assertEqual(
             self.connection.execute("PRAGMA foreign_keys").fetchone()[0],
             1,
@@ -226,14 +225,20 @@ class IdentitySchemaTests(unittest.TestCase):
     def test_migrations_are_idempotent_and_registry_records_one_version(self):
         self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), ())
         self.assertEqual(
-            self.connection.execute(
-                "SELECT version, name FROM schema_migrations"
-            ).fetchall()[0][:],
-            (1, "0001_identidad_roles_permisos_sedes.sql"),
+            tuple(
+                (row["version"], row["name"])
+                for row in self.connection.execute(
+                    "SELECT version, name FROM schema_migrations ORDER BY version"
+                )
+            ),
+            (
+                (1, "0001_identidad_roles_permisos_sedes.sql"),
+                (2, "0002_actividades_entrenadores_clases.sql"),
+            ),
         )
         self.assertEqual(
             self.connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0],
-            1,
+            2,
         )
 
     def test_altered_applied_migration_is_rejected_by_checksum(self):
