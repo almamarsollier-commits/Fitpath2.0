@@ -1,6 +1,6 @@
 # FitPath 2.0 — Bloque 2: propuesta de base de datos
 
-**Estado:** dirección arquitectónica aprobada; tablas de negocio pendientes de implementación y de las decisiones abiertas registradas abajo.
+**Estado:** Microtarea 2 implementada y validada por el usuario con la suite local; perfiles y módulos posteriores siguen pendientes.
 
 **Fecha:** 2026-11-08
 
@@ -8,7 +8,7 @@
 
 **Base anterior:** gimnasio.db queda fuera del diseño y no se migrará ni modificará.
 
-Esta propuesta conserva las 15 decisiones arquitectónicas y los acuerdos complementarios aprobados en DECISIONES.md. Las tablas de negocio siguen siendo diseño pendiente: la Microtarea 1 agrega únicamente infraestructura, registro de migraciones y configuración; no crea entidades de negocio ni endpoints.
+Esta propuesta conserva las 15 decisiones arquitectónicas y los acuerdos complementarios aprobados en DECISIONES.md. La Microtarea 1 agregó infraestructura, registro de migraciones y configuración. La Microtarea 2 implementa únicamente las tablas de identidad, roles, permisos y sedes descritas abajo; no agrega perfiles, endpoints ni otros módulos de negocio.
 
 ## Convenciones del esquema
 
@@ -24,19 +24,19 @@ Esta propuesta conserva las 15 decisiones arquitectónicas y los acuerdos comple
 
 ### Usuarios, roles, permisos y sedes
 
-- **roles** — id_rol INTEGER PRIMARY KEY; nombre TEXT NOT NULL UNIQUE. Contendrá los cinco roles acordados.
-- **permisos** — id_permiso INTEGER PRIMARY KEY; clave TEXT NOT NULL UNIQUE; descripcion TEXT.
-- **rol_permiso** — rol_id INTEGER NOT NULL FK → roles; permiso_id INTEGER NOT NULL FK → permisos; PRIMARY KEY (rol_id, permiso_id).
-- **usuarios** — id_usuario INTEGER PRIMARY KEY; nombre TEXT NOT NULL; apellido TEXT NOT NULL; nombre_usuario TEXT NOT NULL COLLATE NOCASE UNIQUE; email TEXT NOT NULL COLLATE NOCASE UNIQUE; telefono TEXT; rol_id INTEGER NOT NULL FK → roles; activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0,1)). No contiene contraseña ni hash en el Bloque 2; la autenticación corresponde al Bloque 3.
+- **roles** — id_rol INTEGER PRIMARY KEY; nombre TEXT NOT NULL COLLATE NOCASE UNIQUE, no vacío. Implementada en la migración 0001_identidad_roles_permisos_sedes.sql. El seed controlado contiene los cinco nombres aprobados.
+- **permisos** — id_permiso INTEGER PRIMARY KEY; clave TEXT NOT NULL COLLATE NOCASE UNIQUE, no vacía; descripcion TEXT opcional. La tabla está implementada; el catálogo permanece vacío hasta aprobar permisos concretos.
+- **rol_permiso** — rol_id INTEGER NOT NULL FK → roles; permiso_id INTEGER NOT NULL FK → permisos; PRIMARY KEY (rol_id, permiso_id). Implementada y vacía; no se asignan permisos por defecto.
+- **usuarios** — id_usuario INTEGER PRIMARY KEY; nombre y apellido TEXT NOT NULL; nombre_usuario TEXT NOT NULL COLLATE NOCASE UNIQUE; email TEXT NOT NULL COLLATE NOCASE UNIQUE; telefono TEXT opcional; rol_id INTEGER NOT NULL FK → roles; activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0,1)). Campos requeridos no vacíos y sin espacios externos. Email y nombre de usuario se almacenan recortados y en minúscula ASCII. No contiene contraseña ni hash; la autenticación corresponde al Bloque 3.
 - **clientes** — id_cliente INTEGER PRIMARY KEY; usuario_id INTEGER NOT NULL UNIQUE FK → usuarios.
 - **jefes_sede** — id_jefe_sede INTEGER PRIMARY KEY; usuario_id INTEGER NOT NULL UNIQUE FK → usuarios; sede_id INTEGER NOT NULL FK → sedes.
 - **entrenadores** — id_entrenador INTEGER PRIMARY KEY; usuario_id INTEGER NOT NULL UNIQUE FK → usuarios; especialidad TEXT NOT NULL.
 - **entrenador_sede** — entrenador_id INTEGER NOT NULL FK → entrenadores; sede_id INTEGER NOT NULL FK → sedes; activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0,1)); PRIMARY KEY (entrenador_id, sede_id).
 - **tecnicos_mantenimiento** — id_tecnico INTEGER PRIMARY KEY; usuario_id INTEGER NOT NULL UNIQUE FK → usuarios; sede_id INTEGER NOT NULL FK → sedes.
-- **sedes** — id_sede INTEGER PRIMARY KEY; nombre TEXT NOT NULL; direccion TEXT NOT NULL; zona_horaria TEXT NOT NULL. La zona horaria usa un identificador IANA, validado en Flask.
+- **sedes** — id_sede INTEGER PRIMARY KEY; nombre, direccion y zona_horaria TEXT NOT NULL, no vacíos y sin espacios externos. Implementada. La zona horaria usa un identificador IANA que deberá validarse en Flask.
 - Por decisión aprobada el 2026-11-08, no se incluye una tabla administradores ni los campos sedes.administrador_id y membresias.administrador_id. El rol Administrador se representa en usuarios.rol_id mientras no se acuerden atributos o relaciones propios.
 
-El perfil Jefe de sede y el perfil Técnico se asocian a una sede. Entrenadores pueden vincularse a varias sedes. La correspondencia entre rol y perfil debe validarse en el servicio; el refuerzo ante escrituras directas en la base sigue pendiente. Administrador se identifica por usuarios.rol_id y sus permisos; no obtiene acceso implícito a datos privados.
+El perfil Jefe de sede y el perfil Técnico se asocian a una sede. Entrenadores pueden vincularse a varias sedes. Esos perfiles y asignaciones aún no están implementados. La correspondencia entre rol y perfil debe validarse en el servicio; el refuerzo ante escrituras directas en la base sigue pendiente. Administrador se identifica por usuarios.rol_id y los permisos que se aprueben; no obtiene acceso implícito a datos privados.
 
 ### Actividades, clases, disponibilidad e inscripciones
 
@@ -102,7 +102,7 @@ Una deuda tiene cero o muchos pagos parciales. El saldo se deriva de pagos reali
 - Reserva: BEGIN IMMEDIATE; validar que la clase futura esté programada y habilitada, comprobar la membresía requerida, comprobar relación cliente-clase y cupo; insertar; confirmar. La transacción y el índice único previenen carreras, duplicados y sobrecupo.
 - Pagos parciales: dentro de una transacción, sumar pagos realizados, rechazar importe mayor al saldo, insertar pago y confirmar estado/fecha. No existe CHECK SQL que valide una suma entre filas; esa regla se prueba en el servicio y con solicitudes concurrentes.
 - Asistencia: el entrenador debe ser el asignado a la clase y el cliente debe tener inscripción activa; se valida en el backend.
-- Los vocabularios aprobados se aplicarán en las migraciones de negocio; esta Microtarea 1 no crea sus tablas.
+- Los vocabularios aprobados se aplicarán en las migraciones de negocio. La Microtarea 2 solo crea las cinco tablas de identidad y sedes, sin perfiles ni módulos funcionales.
 - No se eliminan en cascada pagos, asistencias, remuneraciones ni historial de mantenimiento.
 
 ## Arquitectura Flask propuesta
@@ -131,18 +131,14 @@ Flask será el único backend futuro de FitPath 2.0. apy.py y server.js permanec
 
 La factory create_app configura el entorno y registra solo blueprints permitidos. Antes de autenticación real, no registra rutas privadas ni administrativas. Las consultas públicas, si se habilitan, contienen únicamente campos no personales. Los módulos privados se incorporan y registran después de autenticación real; el selector demo nunca genera una identidad confiable.
 
-## Archivos SQL versionados propuestos
+## Migraciones y datos iniciales
 
-- 0001_roles_usuarios_sedes_permisos.sql — roles, permisos, usuarios, perfiles, sedes y asignaciones base.
-- 0002_actividades_clases_inscripciones.sql — actividades, actividad_sede, entrenador_sede, disponibilidad, clases, inscripciones y asistencias.
-- 0003_objetivos_rutinas_progreso.sql — objetivos, rutinas, ejercicios, progreso y planes de alimentación.
-- 0004_monedas_membresias_deudas_pagos.sql — monedas, membresías, beneficios, suscripciones, deudas y pagos.
-- 0005_maquinas_mantenimiento_remuneraciones.sql — máquinas, tickets, historial y remuneraciones.
-- 0006_indices_y_triggers_integridad.sql — índices parciales y disparadores que deban proteger invariantes entre tablas.
-- La tabla técnica schema_migrations guarda la versión aplicada y el instante UTC. Cada migración se registra en una transacción.
-- Datos de prueba se cargan solo en una base temporal/configuración de prueba. Roles y permisos iniciales son datos de referencia, separados de usuarios ficticios. No se siembran credenciales.
+- 0001_identidad_roles_permisos_sedes.sql — implementada: roles, permisos, rol_permiso, usuarios y sedes. No crea perfiles ni asignaciones a sedes.
+- Las migraciones posteriores de perfiles/asignaciones y módulos de negocio siguen pendientes; su orden y alcance respetarán las dependencias de las entidades y decisiones abiertas.
+- La tabla técnica schema_migrations guarda versión, nombre, checksum e instante UTC; cada archivo SQL se registra dentro de su transacción.
+- backend/fitpath/seeds.py y los comandos python -m backend.seed --environment development o python -m backend.seed --environment testing cargan explícitamente los cinco roles. No se ejecutan con la factory ni con migraciones; no siembran usuarios, permisos ni credenciales.
+- SQLite NOCASE y lower() solo realizan conversión de mayúsculas ASCII. El esquema exige texto recortado y minúscula ASCII para emails y nombres de usuario, pero no puede garantizar equivalencia/casefold Unicode frente a escrituras directas. Las escrituras futuras del servidor deben normalizar con NFC/casefold; si se requiere garantía también ante SQL directo, habrá que aprobar una collation/función SQLite registrada o una restricción de caracteres.
 - No se modifica ni se copia gimnasio.db.
-
 ## Seguridad y privacidad desde el diseño
 
 - Consultas SQL parametrizadas; validación estricta del cuerpo, tipos, tamaños, enums, rangos y fechas en servidor.
