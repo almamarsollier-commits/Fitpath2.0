@@ -1,14 +1,14 @@
 # FitPath 2.0 — Bloque 2: propuesta de base de datos
 
-**Estado:** propuesta arquitectónica para revisión; no implementada.
+**Estado:** dirección arquitectónica aprobada; tablas de negocio pendientes de implementación y de las decisiones abiertas registradas abajo.
 
-**Fecha:** 2026-11-07
+**Fecha:** 2026-11-08
 
 **Alcance:** modelo relacional para SQLite de desarrollo, plan de migraciones y arquitectura backend Flask.
 
 **Base anterior:** gimnasio.db queda fuera del diseño y no se migrará ni modificará.
 
-Esta propuesta conserva las 15 decisiones arquitectónicas registradas en DECISIONES.md. Las tablas y reglas de esta página son un diseño para aprobar: no existen todavía migraciones, tablas nuevas ni endpoints del Bloque 2.
+Esta propuesta conserva las 15 decisiones arquitectónicas y los acuerdos complementarios aprobados en DECISIONES.md. Las tablas de negocio siguen siendo diseño pendiente: la Microtarea 1 agrega únicamente infraestructura, registro de migraciones y configuración; no crea entidades de negocio ni endpoints.
 
 ## Convenciones del esquema
 
@@ -18,7 +18,7 @@ Esta propuesta conserva las 15 decisiones arquitectónicas registradas en DECISI
 - Los booleanos usan INTEGER NOT NULL CHECK (valor IN (0,1)). Las capacidades, series, repeticiones y descansos tienen CHECK de rango.
 - El dinero usa INTEGER en unidades menores de la moneda. No se usan REAL ni cálculos monetarios en punto flotante.
 - Toda conexión ejecuta PRAGMA foreign_keys=ON antes de iniciar transacciones. El esquema se crea desde cero mediante migraciones; no se reutiliza gimnasio.db.
-- Los valores de estado indicados más abajo son vocabularios propuestos y siguen pendientes de aprobación. La lista de monedas tampoco está definida.
+- Los estados iniciales y ARS fueron aprobados el 2026-11-08. Los estados del catálogo (activa/habilitada) no se reutilizan como estados de suscripciones, inscripciones, clases, máquinas, pagos, tickets o liquidaciones.
 
 ## Modelo relacional propuesto
 
@@ -34,15 +34,15 @@ Esta propuesta conserva las 15 decisiones arquitectónicas registradas en DECISI
 - **entrenador_sede** — entrenador_id INTEGER NOT NULL FK → entrenadores; sede_id INTEGER NOT NULL FK → sedes; activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0,1)); PRIMARY KEY (entrenador_id, sede_id).
 - **tecnicos_mantenimiento** — id_tecnico INTEGER PRIMARY KEY; usuario_id INTEGER NOT NULL UNIQUE FK → usuarios; sede_id INTEGER NOT NULL FK → sedes.
 - **sedes** — id_sede INTEGER PRIMARY KEY; nombre TEXT NOT NULL; direccion TEXT NOT NULL; zona_horaria TEXT NOT NULL. La zona horaria usa un identificador IANA, validado en Flask.
-- La propuesta no incluye una tabla administradores ni los campos sedes.administrador_id y membresias.administrador_id. Esos tres puntos siguen pendientes de aprobación; se explican en la sección de pendientes. Hasta que se aprueben, no deben considerarse decisiones cerradas.
+- Por decisión aprobada el 2026-11-08, no se incluye una tabla administradores ni los campos sedes.administrador_id y membresias.administrador_id. El rol Administrador se representa en usuarios.rol_id mientras no se acuerden atributos o relaciones propios.
 
-El perfil Jefe de sede y el perfil Técnico se asocian a una sede. Entrenadores pueden vincularse a varias sedes. La correspondencia entre rol y tabla de perfil se valida en el servicio de usuarios. Administrador se identifica por usuarios.rol_id y sus permisos; no obtiene acceso implícito a datos privados.
+El perfil Jefe de sede y el perfil Técnico se asocian a una sede. Entrenadores pueden vincularse a varias sedes. La correspondencia entre rol y perfil debe validarse en el servicio; el refuerzo ante escrituras directas en la base sigue pendiente. Administrador se identifica por usuarios.rol_id y sus permisos; no obtiene acceso implícito a datos privados.
 
 ### Actividades, clases, disponibilidad e inscripciones
 
 - **actividades** — id_actividad INTEGER PRIMARY KEY; nombre TEXT NOT NULL UNIQUE.
 - **actividad_sede** — actividad_id INTEGER NOT NULL FK → actividades; sede_id INTEGER NOT NULL FK → sedes; habilitada INTEGER NOT NULL DEFAULT 1 CHECK (habilitada IN (0,1)); PRIMARY KEY (actividad_id, sede_id).
-- **clases** — id_clase INTEGER PRIMARY KEY; actividad_id INTEGER NOT NULL; sede_id INTEGER NOT NULL; entrenador_id INTEGER NOT NULL; inicio_utc TEXT NOT NULL; fin_utc TEXT NOT NULL; cupo_maximo INTEGER NOT NULL CHECK (cupo_maximo > 0); estado TEXT NOT NULL CHECK (estado IN ('programada','cancelada','realizada')). FK compuesta (actividad_id, sede_id) → actividad_sede; FK compuesta (entrenador_id, sede_id) → entrenador_sede; CHECK (fin_utc > inicio_utc). Estos valores son candidatos y siguen pendientes de aprobación.
+- **clases** — id_clase INTEGER PRIMARY KEY; actividad_id INTEGER NOT NULL; sede_id INTEGER NOT NULL; entrenador_id INTEGER NOT NULL; inicio_utc TEXT NOT NULL; fin_utc TEXT NOT NULL; cupo_maximo INTEGER NOT NULL CHECK (cupo_maximo > 0); estado TEXT NOT NULL CHECK (estado IN ('programada','cancelada','realizada')). FK compuesta (actividad_id, sede_id) → actividad_sede; FK compuesta (entrenador_id, sede_id) → entrenador_sede; CHECK (fin_utc > inicio_utc). El vocabulario de estado fue aprobado el 2026-11-08.
 - **disponibilidad_entrenador** — id_disponibilidad INTEGER PRIMARY KEY; entrenador_id INTEGER NOT NULL; sede_id INTEGER NOT NULL; dia_semana INTEGER NOT NULL CHECK (dia_semana BETWEEN 1 AND 7); hora_inicio TEXT NOT NULL; hora_fin TEXT NOT NULL; UNIQUE (entrenador_id, sede_id, dia_semana, hora_inicio, hora_fin); FK compuesta (entrenador_id, sede_id) → entrenador_sede; CHECK (hora_fin > hora_inicio). Los intervalos se interpretan como recurrencia semanal; solapamientos se validan en el servicio.
 - **inscripciones** — id_inscripcion INTEGER PRIMARY KEY; cliente_id INTEGER NOT NULL FK → clientes; clase_id INTEGER NOT NULL FK → clases; fecha_utc TEXT NOT NULL; estado TEXT NOT NULL CHECK (estado IN ('activa','cancelada')). Índice único parcial por (cliente_id, clase_id) WHERE estado='activa'.
 - **asistencias** — id_asistencia INTEGER PRIMARY KEY; inscripcion_id INTEGER NOT NULL UNIQUE FK → inscripciones; fecha_utc TEXT NOT NULL; estado TEXT NOT NULL CHECK (estado IN ('presente','ausente')).
@@ -64,22 +64,22 @@ El acceso a progreso y planes se filtra por cliente propietario y relación func
 
 ### Monedas, membresías, deudas y pagos
 
-- **monedas** — codigo TEXT PRIMARY KEY CHECK (length(codigo) = 3 AND codigo = upper(codigo)); decimales INTEGER NOT NULL CHECK (decimales BETWEEN 0 AND 4). La lista inicial de códigos queda pendiente.
+- **monedas** — codigo TEXT PRIMARY KEY CHECK (length(codigo) = 3 AND codigo = upper(codigo)); decimales INTEGER NOT NULL CHECK (decimales BETWEEN 0 AND 4). ARS será el primer código; el catálogo se mantiene extensible.
 - **membresias** — id_membresia INTEGER PRIMARY KEY; nombre TEXT NOT NULL UNIQUE; precio_unidades_menores INTEGER NOT NULL CHECK (precio_unidades_menores >= 0); moneda TEXT NOT NULL FK → monedas; descripcion TEXT; activa INTEGER NOT NULL CHECK (activa IN (0,1)). Gratuita y Premium son los nombres iniciales del SRS; no se inventan precios.
 - **beneficios** — id_beneficio INTEGER PRIMARY KEY; nombre TEXT NOT NULL UNIQUE; descripcion TEXT.
 - **membresia_beneficio** — membresia_id INTEGER NOT NULL FK → membresias; beneficio_id INTEGER NOT NULL FK → beneficios; PRIMARY KEY (membresia_id, beneficio_id).
 - **cliente_membresia** — id_cliente_membresia INTEGER PRIMARY KEY; cliente_id INTEGER NOT NULL FK → clientes; membresia_id INTEGER NOT NULL FK → membresias; fecha_inicio TEXT NOT NULL; fecha_fin TEXT; estado TEXT NOT NULL CHECK (estado IN ('activa','vencida','cancelada')); UNIQUE (id_cliente_membresia, cliente_id); CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio). Índice único parcial por cliente WHERE estado='activa'.
 - **deudas** — id_deuda INTEGER PRIMARY KEY; cliente_id INTEGER NOT NULL FK → clientes; cliente_membresia_id INTEGER; concepto TEXT NOT NULL; importe_unidades_menores INTEGER NOT NULL CHECK (importe_unidades_menores > 0); moneda TEXT NOT NULL FK → monedas; vence_el TEXT NOT NULL; FK compuesta (cliente_membresia_id, cliente_id) → cliente_membresia(id_cliente_membresia, cliente_id), para comprobar que la suscripción pertenece al mismo cliente cuando se informa.
-- **pagos** — id_pago INTEGER PRIMARY KEY; deuda_id INTEGER NOT NULL FK → deudas; importe_unidades_menores INTEGER NOT NULL CHECK (importe_unidades_menores > 0); metodo TEXT NOT NULL CHECK (metodo IN ('efectivo','transferencia','digital')); estado TEXT NOT NULL CHECK (estado IN ('en_proceso','realizado','anulado')); creado_utc TEXT NOT NULL; realizado_utc TEXT. La moneda del pago es la de su deuda. Estos vocabularios son candidatos y siguen pendientes de aprobación. CHECK ((estado='realizado' AND realizado_utc IS NOT NULL) OR (estado<>'realizado' AND realizado_utc IS NULL)) mantiene consistente estado y realizado_utc.
+- **pagos** — id_pago INTEGER PRIMARY KEY; deuda_id INTEGER NOT NULL FK → deudas; importe_unidades_menores INTEGER NOT NULL CHECK (importe_unidades_menores > 0); metodo TEXT NOT NULL CHECK (metodo IN ('efectivo','transferencia','digital')); estado TEXT NOT NULL CHECK (estado IN ('en_proceso','realizado','anulado')); creado_utc TEXT NOT NULL; realizado_utc TEXT. La moneda del pago es la de su deuda. El vocabulario de estado fue aprobado el 2026-11-08. CHECK ((estado='realizado' AND realizado_utc IS NOT NULL) OR (estado<>'realizado' AND realizado_utc IS NULL)) mantiene consistente estado y realizado_utc.
 
 Una deuda tiene cero o muchos pagos parciales. El saldo se deriva de pagos realizados y la deuda; no se guardan estados parciales duplicados. El servicio impide que la suma confirmada supere la deuda. No hay integración de pagos ni endpoints de pagos habilitados en esta etapa.
 
 ### Máquinas, mantenimiento y remuneraciones
 
 - **maquinas** — id_maquina INTEGER PRIMARY KEY; sede_id INTEGER NOT NULL FK → sedes; tipo TEXT NOT NULL; estado TEXT NOT NULL CHECK (estado IN ('operativa','en_reparacion','fuera_de_servicio')); UNIQUE (id_maquina, sede_id). sede_id es la ubicación autorizada por la decisión arquitectónica 7. La diferencia del SRS se registra como aclaración sin modificar el PDF original.
-- **tickets_mantenimiento** — id_ticket INTEGER PRIMARY KEY; maquina_id INTEGER NOT NULL FK → maquinas; tecnico_id INTEGER NOT NULL FK → tecnicos_mantenimiento; fecha_generacion_utc TEXT NOT NULL; descripcion TEXT NOT NULL; estado TEXT NOT NULL CHECK (estado IN ('abierto','en_proceso','resuelto','cancelado')); UNIQUE (id_ticket, maquina_id). Estos estados son candidatos y siguen pendientes de aprobación. Un trigger valida que técnico y máquina pertenezcan a la misma sede al crear o modificar el ticket.
+- **tickets_mantenimiento** — id_ticket INTEGER PRIMARY KEY; maquina_id INTEGER NOT NULL FK → maquinas; tecnico_id INTEGER NOT NULL FK → tecnicos_mantenimiento; fecha_generacion_utc TEXT NOT NULL; descripcion TEXT NOT NULL; estado TEXT NOT NULL CHECK (estado IN ('abierto','en_proceso','resuelto','cancelado')); UNIQUE (id_ticket, maquina_id). El vocabulario de estado fue aprobado el 2026-11-08. Un trigger valida que técnico y máquina pertenezcan a la misma sede al crear o modificar el ticket.
 - **historial_mantenimiento** — id_historial INTEGER PRIMARY KEY; maquina_id INTEGER NOT NULL FK → maquinas; ticket_id INTEGER; tecnico_id INTEGER NOT NULL FK → tecnicos_mantenimiento; fecha_utc TEXT NOT NULL; estado_anterior TEXT; estado_nuevo TEXT NOT NULL; descripcion TEXT. FK compuesta (ticket_id, maquina_id) → tickets_mantenimiento(id_ticket, maquina_id), para impedir enlazar un ticket de otra máquina. Estado anterior/nuevo usa los estados definidos para máquinas.
-- **remuneraciones** — id_remuneracion INTEGER PRIMARY KEY; clase_id INTEGER NOT NULL UNIQUE FK → clases; importe_unidades_menores INTEGER NOT NULL CHECK (importe_unidades_menores >= 0); moneda TEXT NOT NULL FK → monedas; estado_liquidacion TEXT NOT NULL CHECK (estado_liquidacion IN ('pendiente','liquidada','anulada')); liquidada_utc TEXT. Estos estados son candidatos y siguen pendientes de aprobación. CHECK ((estado_liquidacion='liquidada' AND liquidada_utc IS NOT NULL) OR (estado_liquidacion<>'liquidada' AND liquidada_utc IS NULL)) exige liquidada_utc solo cuando el estado sea liquidada. La persona entrenadora se obtiene de la clase; no se registra pago al personal.
+- **remuneraciones** — id_remuneracion INTEGER PRIMARY KEY; clase_id INTEGER NOT NULL FK → clases; importe_unidades_menores INTEGER NOT NULL CHECK (importe_unidades_menores >= 0); moneda TEXT NOT NULL FK → monedas; estado_liquidacion TEXT NOT NULL CHECK (estado_liquidacion IN ('pendiente','liquidada','anulada')); liquidada_utc TEXT. El vocabulario de liquidación fue aprobado el 2026-11-08. CHECK ((estado_liquidacion='liquidada' AND liquidada_utc IS NOT NULL) OR (estado_liquidacion<>'liquidada' AND liquidada_utc IS NULL)) exige liquidada_utc solo cuando el estado sea liquidada. La persona entrenadora se obtiene de la clase; no se registra pago al personal.
 - **reportes** no es tabla; se derivan de datos existentes según la decisión arquitectónica 12.
 
 ## Relaciones y cardinalidades
@@ -93,7 +93,7 @@ Una deuda tiene cero o muchos pagos parciales. El saldo se deriva de pagos reali
 - Rutina N:M ejercicios mediante rutina_ejercicio, con orden y parámetros por instancia.
 - Membresía N:M beneficios mediante membresia_beneficio; cliente 1:N suscripciones históricas, con máximo una activa.
 - Cliente 1:N deudas; deuda 1:N pagos parciales. No hay FK de vuelta desde deuda a pago.
-- Sede 1:N máquinas y técnicos; máquina 1:N tickets e historial; clase 1:0..1 remuneración propuesta.
+- Sede 1:N máquinas y técnicos; máquina 1:N tickets e historial; clase a remuneraciones: cardinalidad pendiente; no se fija UNIQUE(clase_id) hasta resolverla.
 
 ## Restricciones y transacciones
 
@@ -102,7 +102,7 @@ Una deuda tiene cero o muchos pagos parciales. El saldo se deriva de pagos reali
 - Reserva: BEGIN IMMEDIATE; validar que la clase futura esté programada y habilitada, comprobar la membresía requerida, comprobar relación cliente-clase y cupo; insertar; confirmar. La transacción y el índice único previenen carreras, duplicados y sobrecupo.
 - Pagos parciales: dentro de una transacción, sumar pagos realizados, rechazar importe mayor al saldo, insertar pago y confirmar estado/fecha. No existe CHECK SQL que valide una suma entre filas; esa regla se prueba en el servicio y con solicitudes concurrentes.
 - Asistencia: el entrenador debe ser el asignado a la clase y el cliente debe tener inscripción activa; se valida en el backend.
-- Los estados indicados arriba son propuestas. Sus vocabularios se aprueban antes de cerrar las migraciones.
+- Los vocabularios aprobados se aplicarán en las migraciones de negocio; esta Microtarea 1 no crea sus tablas.
 - No se eliminan en cascada pagos, asistencias, remuneraciones ni historial de mantenimiento.
 
 ## Arquitectura Flask propuesta
@@ -163,10 +163,19 @@ La factory create_app configura el entorno y registra solo blueprints permitidos
 - Prueba de rutas públicas verifica que ningún campo privado se filtra. Prueba de configuración confirma que dev y tests no apuntan a gimnasio.db ni a la misma base.
 - El SRS fija 500 usuarios concurrentes, operaciones habituales menores a 2 segundos y disponibilidad de 99,5 %. SQLite permite múltiples lectores, pero solo un escritor por archivo a la vez; el prototipo no debe declararse conforme sin pruebas de carga y disponibilidad. Si el despliegue previsto excede sus límites, se evalúa una base cliente-servidor antes de producción. Referencias: https://www.sqlite.org/whentouse.html y https://www.sqlite.org/isolation.html.
 
+## Decisiones de esquema aún pendientes
+
+- La cantidad de remuneraciones permitidas por clase y su regla para evitar duplicados.
+- Cómo los beneficios de una membresía habilitan clases o actividades.
+- Cómo asegurar desde la base la correspondencia entre usuarios.rol_id y sus tablas de perfil.
+- Email, nombre de usuario o ambos como identificador de inicio de sesión, antes del Bloque 3.
+
+Estas decisiones no se implementan ni se resuelven por inferencia en la Microtarea 1.
+
 ## Primeras tres microtareas
 
 1. **Base Flask y conexión SQLite.** Crear factory, configuración de desarrollo/prueba, conexión con FK habilitadas y runner de migraciones. Pruebas: app factory con DB temporal, PRAGMA por conexión, runner versionado; seguridad: rutas privadas ausentes y rechazo de ruta a gimnasio.db.
 2. **Migración de identidad, sedes y permisos.** Crear roles/permisos, usuarios y perfiles mínimos, sedes con zona horaria y relaciones entrenador-sede. Pruebas: UNIQUE, FK, perfil/rol y validación de timezone; seguridad: no sembrar credenciales ni usuarios reales.
 3. **Módulo de clases e inscripciones.** Crear catálogos, actividad_sede, entrenador_sede, disponibilidad, clases, inscripciones y asistencias; implementar servicio transaccional de reserva, sin exponer su endpoint antes de auth. Pruebas: FK compuestas, duplicados, cupo concurrente, entrenador/sede, inscripción/asistencia; seguridad: una prueba de autorización indebida debe confirmar que no se modifica la DB.
 
-**Próximo paso:** resolver las decisiones pendientes listadas en DECISIONES.md, aprobar este esquema y comenzar la microtarea 1. No se inicia código hasta esa aprobación.
+**Próximo paso:** La Microtarea 1 agrega la infraestructura Flask y SQLite; el usuario reporta 5 pruebas aprobadas con Python 3.15.2 desde su terminal de VS Code; el entorno de Codex no dispone de Python para repetirlas. No se han creado tablas de negocio ni endpoints y la Microtarea 2 no se ha iniciado.

@@ -1,6 +1,6 @@
 # FitPath 2.0 — Decisiones
 
-**Estado:** borrador actualizado para revisión.
+**Estado:** acuerdos del Bloque 2 actualizados; decisiones aprobadas y pendientes registradas.
 Las decisiones arquitectónicas y funcionales aprobadas se mantienen separadas. Las decisiones previas provienen de acuerdos del proyecto, no se atribuyen al SRS. Las diferencias entre fuentes se registran sin inferir resoluciones no aprobadas.
 
 ## 1. Acuerdos arquitectónicos aprobados previamente
@@ -94,17 +94,25 @@ No bloquean el MVP visual:
 
 - Identificador de acceso y vínculo entre cuentas locales y Google OAuth: antes del Bloque 3.
 - Alta y asignación de perfiles del personal: antes de implementar autenticación y administración persistente.
-- Métodos, estados y proveedor de pagos reales: antes de implementar pagos persistentes.
+- Métodos, proveedor y flujo de pagos reales: antes de implementar pagos persistentes. Los estados internos del modelo quedaron aprobados para el esquema.
 - Revisión visual de cardinalidades y relaciones de los diagramas: completada para preparar la propuesta del Bloque 2; la implementación del esquema sigue pendiente de aprobación.
 - Verificación de concurrencia, tiempos de respuesta y disponibilidad: al definir backend y entorno de ejecución.
 - Alcance de archivos en S3, flujos de Calendar y agente de IA: antes de sus respectivos bloques.
 
-### Decisiones pendientes de aprobación para el esquema del Bloque 2
+### Decisiones aprobadas para el esquema del Bloque 2 (2026-11-08)
 
-- Eliminar SEDES.fk_administrador.
-- Eliminar MEMBRESIAS.fk_administrador.
-- Omitir la tabla ADMINISTRADORES y representar el rol mediante USUARIOS.fk_rol.
-- Aprobar el catálogo inicial de monedas y los vocabularios de estado propuestos para clases, membresías, pagos, tickets y liquidaciones.
+- sedes no tendrá administrador_id.
+- membresias no tendrá administrador_id.
+- Se omite la tabla administradores mientras no tenga atributos o relaciones propias; el rol Administrador se representa mediante usuarios.rol_id.
+- La moneda inicial será ARS en un catálogo extensible.
+- Se aprueban los estados iniciales propuestos, manteniendo separados los estados del catálogo (activa/habilitada), suscripción (activa, vencida, cancelada), inscripción (activa, cancelada), clase (programada, cancelada, realizada), máquina (operativa, en_reparacion, fuera_de_servicio), pago (en_proceso, realizado, anulado), ticket (abierto, en_proceso, resuelto, cancelado) y liquidación (pendiente, liquidada, anulada).
+
+### Decisiones pendientes antes de implementar sus módulos
+
+- Cardinalidad de remuneraciones por clase y regla para evitar duplicados.
+- Relación entre beneficios de membresía y las clases o actividades que habilitan.
+- Restricciones que garanticen la compatibilidad entre rol y perfil también ante escrituras directas en la base.
+- Identificador de inicio de sesión: email, nombre de usuario o ambos; resolver antes del Bloque 3.
 
 ## 5. Contexto arquitectónico aprobado en instrucciones previas
 

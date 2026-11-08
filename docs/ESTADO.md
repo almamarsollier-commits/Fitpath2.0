@@ -1,21 +1,22 @@
 # FitPath 2.0 — Estado del proyecto
 
-**Fecha de revisión:** 2026-11-07
+**Fecha de revisión:** 2026-11-08
 **Repositorio:** C:/Proyectos/Fitpath2.0
 **Rama:** fitpath
 **Seguimiento remoto:** origin/fitpath
 
 ## Estado de Git
 
-- La rama activa es fitpath y está sincronizada con origin/fitpath al iniciar este checkpoint.
-- Las referencias visuales locales de docs/referencias-visuales/ siguen sin seguimiento y no se incluyen en esta entrega.
-- Este checkpoint modifica solamente documentación; no cambia otras ramas ni contiene bases locales, dependencias ni código ejecutable.
+- La rama activa es fitpath; al iniciar esta microtarea no había cambios versionados locales.
+- docs/referencias-visuales/ ya estaba sin seguimiento y se conserva intacta.
+- Los cambios corresponden a la Microtarea 1; no se incluyeron bases de datos ni dependencias.
+- No se instalaron dependencias.
 
 ## Estado por bloque
 
 ### Bloque 0 — Documentación y planificación
 
-Completado. La planificación y las decisiones de base están documentadas.
+Completado. Las decisiones arquitectónicas y el modelo propuesto están documentados.
 
 ### Bloque 1 — MVP visual
 
@@ -23,17 +24,20 @@ Parcialmente implementado. Están disponibles la landing pública, el shell visu
 
 ### Bloque 2 — Base de datos, Flask y APIs REST
 
-La arquitectura y el modelo de datos están propuestos en docs/BLOQUE2_BD_PROPUESTA.md y pendientes de aprobación final. Se revisaron los diagramas y se registraron acuerdos complementarios aprobados en docs/DECISIONES.md.
+Se agregó código para la infraestructura mínima en backend/: fábrica create_app(), configuración separada de desarrollo y pruebas, conexión SQLite bajo demanda con verificación de PRAGMA foreign_keys y cierre por contexto. La ejecución fue validada por la suite informada por el usuario; este entorno no pudo repetirla.
 
-Todavía no existen migraciones SQL ni tablas nuevas implementadas para FitPath 2.0. No se implementaron endpoints nuevos. El backend Flask no fue reorganizado. apy.py, server.js y gimnasio.db permanecen como referencia anterior; no se ejecutaron ni modificaron durante este trabajo. gimnasio.db no forma parte del nuevo modelo.
+El módulo de migraciones contiene un runner diseñado para aplicar archivos SQL versionados en transacciones individuales, registrar versión, nombre, checksum e instante UTC, comprobar claves foráneas y revertir una migración fallida. La tabla técnica schema_migrations se crea solo al ejecutar explícitamente el runner. No hay migraciones de negocio, tablas funcionales ni rutas registradas. La suite ejecutada por el usuario ejercitó el runner con bases temporales; no se aplicaron migraciones a la base de desarrollo.
 
-## Pendientes
+Se agregaron pruebas unittest para la factory, separación de bases, claves foráneas, rechazo de la ruta heredada y rollback de una migración fallida. El usuario reporta que ejecutó la suite desde su terminal de VS Code con Python 3.15.2: 5 pruebas aprobadas, sin errores. Este entorno de Codex no dispone de Python, por lo que el resultado no se repitió aquí.
 
-- Aprobar o ajustar el esquema propuesto y resolver las decisiones marcadas como pendientes en docs/DECISIONES.md.
-- Mantener los datos de prueba aislados de cualquier dato real.
-- No habilitar endpoints privados o administrativos antes de implementar autenticación real.
-- No afirmar que SQLite cumple los requisitos de concurrencia y disponibilidad del SRS sin mediciones.
+apy.py, server.js y gimnasio.db no se modificaron ni ejecutaron. El código nuevo incluye una protección para rechazar la ruta exacta de gimnasio.db; la prueba fue aprobada en la suite ejecutada desde VS Code, según el resultado reportado por el usuario. No se crearon archivos de base de datos durante la implementación.
+
+## Decisiones aprobadas y pendientes
+
+Las cuatro decisiones nuevas del esquema —eliminar las dos referencias al administrador, omitir la tabla administradores, iniciar el catálogo de monedas con ARS y aprobar los vocabularios de estado diferenciados— están registradas en docs/DECISIONES.md.
+
+Siguen pendientes: cardinalidad de remuneraciones por clase y duplicados; relación de beneficios con clases o actividades; integridad de rol/perfil ante escrituras directas; e identificador de inicio de sesión para el Bloque 3.
 
 ## Próximo paso
 
-Mañana: resolver las decisiones abiertas, aprobar el esquema y comenzar la microtarea 1 de la propuesta: estructura Flask, configuración por entorno, conexión SQLite con claves foráneas activas y runner de migraciones.
+La Microtarea 1 queda validada según la ejecución informada por el usuario. La Microtarea 2 no se ha iniciado.

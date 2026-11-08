@@ -3,3 +3,4 @@
 __pycache__/
 node_modules/
 gimnasio.db
+/backend/instance/
