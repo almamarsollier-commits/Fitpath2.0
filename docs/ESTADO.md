@@ -36,6 +36,12 @@ La Microtarea 4 agrega la migración 0003 para clientes, inscripciones y asisten
 
 El usuario confirmó que la suite automatizada completa de la Microtarea 4 se ejecutó satisfactoriamente desde su terminal de VS Code, sin informar cantidades. En esta sesión no pudo repetirse por la ausencia de Flask; la validación aislada con SQLite y biblioteca estándar comprobó migraciones, transacciones, concurrencia y claves foráneas.
 
+La Microtarea 5 agrega la migración 0004 para tipos_objetivo, objetivos, cliente_objetivo, rutinas, ejercicios y rutina_ejercicio, con FK restrictivas, checks de fecha UTC y parámetros, índices y orden único por rutina. Se añadieron pruebas unittest con bases temporales y se actualizaron las expectativas acumuladas de las Microtareas 2 a 4.
+
+El usuario confirmó que la suite automatizada completa de las Microtareas 1 a 5 terminó satisfactoriamente desde su terminal de VS Code. En este entorno no pudo repetirse porque falta Flask; no se instalaron dependencias. Una validación aislada con sqlite3 verificó la aplicación e idempotencia de las migraciones 0001–0004, claves foráneas, checks y rollback de una migración fallida. El tamaño y la fecha de modificación de gimnasio.db no cambiaron.
+
+Queda pendiente decidir si rutinas.objetivo_id debe corresponder a una fila de cliente_objetivo del mismo cliente y cómo asegurar en el futuro la autorización real del entrenador. No se agregó una relación entrenador-cliente ni endpoints.
+
 SQLite verifica el formato canónico UTC y el orden de inicio/fin. La conversión entre la zona horaria IANA de la sede, UTC, disponibilidad semanal y conflictos horarios requiere lógica de servicio. La base tampoco impone solapamientos entre disponibilidades. La compatibilidad entre usuarios.rol_id y el perfil Entrenador permanece pendiente; la FK de entrenadores solo verifica que exista el usuario.
 
 apy.py, server.js y gimnasio.db no se modificaron ni ejecutaron. Las pruebas usan bases temporales; la nueva migración opera sobre la conexión que recibe y conserva las relaciones históricas con ON DELETE RESTRICT.
@@ -50,4 +56,4 @@ Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membr
 
 ## Próximo paso
 
-La Microtarea 4 fue validada por el usuario y se cierra con commit local. La Microtarea 5 no se inició.
+La Microtarea 5 fue validada por el usuario y se cierra con este commit local. La Microtarea 6 no se inicia en esta tarea.
