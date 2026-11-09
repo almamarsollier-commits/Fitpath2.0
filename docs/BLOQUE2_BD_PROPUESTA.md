@@ -1,6 +1,6 @@
 # FitPath 2.0 — Bloque 2: propuesta de base de datos
 
-**Estado:** Microtarea 4 implementada y validada por el usuario mediante la suite completa ejecutada desde VS Code. El servicio de inscripción es interno y no sustituye la autorización por membresía ni por identidad autenticada.
+**Estado:** Microtareas 1 a 6 implementadas y validadas; la suite completa de M6 fue confirmada por el usuario desde VS Code. No se habilitan endpoints sensibles ni autenticación.
 
 **Fecha:** 2026-11-08
 
@@ -62,8 +62,9 @@ Los índices inversos de actividad_sede y entrenador_sede facilitan consultas po
 
 La migración 0004 implementa estos seis objetos con FK restrictivas, restricciones de texto y fecha UTC canónica, parámetros enteros y orden único por rutina. La clave primaria de cliente_objetivo permite buscar objetivos de un cliente y su índice inverso consultar clientes por objetivo; los índices de rutinas filtran por cliente/entrenador y el de rutina_ejercicio por ejercicio. rutinas.objetivo_id referencia un objetivo existente, pero la base no garantiza que ese objetivo figure en cliente_objetivo para el mismo cliente; esa regla queda pendiente. No se agrega una tabla entrenador-cliente ni autorización de acceso.
 
-- **progresos** — id_progreso INTEGER PRIMARY KEY; cliente_id INTEGER NOT NULL FK → clientes; fecha_utc TEXT NOT NULL; peso_kg REAL CHECK (peso_kg IS NULL OR peso_kg > 0); porcentaje_grasa REAL CHECK (porcentaje_grasa IS NULL OR porcentaje_grasa BETWEEN 0 AND 100); rendimiento_ejercicios TEXT; observaciones TEXT.
-- **planes_alimentacion** — id_plan_alimentacion INTEGER PRIMARY KEY; cliente_id INTEGER NOT NULL FK → clientes; objetivo_id INTEGER NOT NULL FK → objetivos; nombre TEXT NOT NULL; descripcion TEXT; fecha_creacion_utc TEXT NOT NULL; fecha_actualizacion_utc TEXT NOT NULL; CHECK (fecha_actualizacion_utc >= fecha_creacion_utc).
+- **progresos** — id_progreso INTEGER PRIMARY KEY; cliente_id INTEGER NOT NULL FK → clientes; fecha_utc TEXT NOT NULL en UTC canónico; peso_kg REAL opcional CHECK numérico y > 0; porcentaje_grasa REAL opcional CHECK numérico y entre 0 y 100; rendimiento_ejercicios TEXT; observaciones TEXT. Implementada en 0005 con índice por cliente/fecha.
+- **planes_alimentacion** — id_plan_alimentacion INTEGER PRIMARY KEY; cliente_id INTEGER NOT NULL FK → clientes; objetivo_id INTEGER NOT NULL FK → objetivos; nombre TEXT NOT NULL; descripcion TEXT opcional; indicaciones TEXT opcional; fecha_creacion_utc y fecha_actualizacion_utc TEXT NOT NULL en UTC canónico; CHECK (fecha_actualizacion_utc >= fecha_creacion_utc). Implementada en 0005.
+La migración 0005 agrega FK restrictivas, validaciones de mediciones y fechas, y los índices por cliente/fecha y objetivo. La FK directa plan-objetivo no verifica que el objetivo pertenezca al mismo cliente mediante cliente_objetivo; esa decisión permanece pendiente. El campo indicaciones se incorpora por el requisito explícito de la Microtarea 6.
 
 El acceso a progreso y planes se filtra por cliente propietario y relación funcional autorizada. Las observaciones de entrenador no habilitan por sí solas acceso global a la ficha del cliente.
 
@@ -177,9 +178,10 @@ La factory create_app configura el entorno y registra solo blueprints permitidos
 - Cómo asegurar desde la base la correspondencia entre usuarios.rol_id y sus tablas de perfil.
 - Email, nombre de usuario o ambos como identificador de inicio de sesión, antes del Bloque 3.
 - Si una rutina que indica objetivo debe exigir que ese objetivo esté asociado al mismo cliente, y si se comprobará mediante FK compuesta, trigger o servicio.
+- Si el objetivo de un plan de alimentación debe estar asociado al mismo cliente mediante cliente_objetivo o si alcanza la FK directa a objetivos.
 - Cómo definir la asignación efectiva y la autorización entre entrenador y cliente; la Microtarea 5 no agrega una relación entrenador-cliente.
 
-Estas decisiones continúan pendientes y no se resuelven por inferencia en las Microtareas 1 a 5.
+Estas decisiones continúan pendientes y no se resuelven por inferencia en las Microtareas 1 a 6.
 
 ## Microtareas del Bloque 2
 
@@ -188,5 +190,6 @@ Estas decisiones continúan pendientes y no se resuelven por inferencia en las M
 3. **Actividades, entrenadores y programación de clases — implementada y validada.** Migración 0002, disponibilidad y clases con validaciones referenciales.
 4. **Clientes, inscripciones, asistencias y control de cupos — implementada y validada.** Migración 0003 y servicio interno sin endpoints; la suite completa fue confirmada como satisfactoria por el usuario. Membresía y autorización siguen pendientes.
 5. **Objetivos, rutinas y ejercicios — implementada y validada.** Migración 0004 y pruebas con bases temporales; la suite completa fue confirmada como satisfactoria por el usuario. La elegibilidad del objetivo por cliente y la autorización del entrenador quedan pendientes.
+6. **Progreso físico y alimentación — implementada y validada.** Migración 0005 y pruebas temporales; la suite completa fue confirmada por el usuario. La pertenencia del objetivo de un plan al mismo cliente permanece pendiente; no se agregan endpoints ni autenticación.
 
-**Próximo paso:** la suite completa de la Microtarea 5 fue confirmada satisfactoria por el usuario; no se inicia la Microtarea 6 hasta su aprobación.
+**Próximo paso:** Microtarea 6 validada; esperar aprobación antes de iniciar la Microtarea 7.

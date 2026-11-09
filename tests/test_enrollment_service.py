@@ -36,7 +36,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
 
         self.assertEqual(
             apply_migrations(self.connection, MIGRATIONS_DIR),
-            (1, 2, 3, 4),
+            (1, 2, 3, 4, 5),
         )
         seed_initial_roles(self.connection)
 
@@ -182,6 +182,8 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
                 "rutinas",
                 "ejercicios",
                 "rutina_ejercicio",
+                "progresos",
+                "planes_alimentacion",
             },
         )
         versions = tuple(
@@ -197,6 +199,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
                 (2, "0002_actividades_entrenadores_clases.sql"),
                 (3, "0003_clientes_inscripciones_asistencias.sql"),
                 (4, "0004_objetivos_rutinas.sql"),
+                (5, "0005_progreso_alimentacion.sql"),
             ),
         )
         self.assertEqual(
@@ -583,7 +586,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
             self.connection.execute(
                 "SELECT count(*) FROM schema_migrations"
             ).fetchone()[0],
-            4,
+            5,
         )
         self.assertFalse(self.connection.in_transaction)
         self.assertEqual(

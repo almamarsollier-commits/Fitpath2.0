@@ -42,6 +42,12 @@ El usuario confirmó que la suite automatizada completa de las Microtareas 1 a 5
 
 Queda pendiente decidir si rutinas.objetivo_id debe corresponder a una fila de cliente_objetivo del mismo cliente y cómo asegurar en el futuro la autorización real del entrenador. No se agregó una relación entrenador-cliente ni endpoints.
 
+La Microtarea 6 agrega la migración 0005 con progresos y planes_alimentacion. Conserva mediciones históricas por cliente y planes con objetivo requerido según el modelo aprobado; añade indicaciones opcionales por el requisito explícito de esta microtarea. No crea servicios, autenticación ni endpoints.
+
+La FK de plan a objetivo no garantiza pertenencia a cliente_objetivo para el mismo cliente; esa decisión sigue pendiente. Se añadieron pruebas con bases temporales para integridad, rangos, historia, idempotencia y rollback.
+
+El usuario confirmó que ejecutó satisfactoriamente desde VS Code la suite completa: python -m unittest discover -s tests -v. En este entorno no pudo repetirse porque falta Flask; no se instalaron dependencias. La validación aislada con sqlite3 comprobó la migración 0005, relaciones, rangos, historial, idempotencia y rollback. La sintaxis de las pruebas compiló correctamente y gimnasio.db no cambió en tamaño ni fecha de modificación.
+
 SQLite verifica el formato canónico UTC y el orden de inicio/fin. La conversión entre la zona horaria IANA de la sede, UTC, disponibilidad semanal y conflictos horarios requiere lógica de servicio. La base tampoco impone solapamientos entre disponibilidades. La compatibilidad entre usuarios.rol_id y el perfil Entrenador permanece pendiente; la FK de entrenadores solo verifica que exista el usuario.
 
 apy.py, server.js y gimnasio.db no se modificaron ni ejecutaron. Las pruebas usan bases temporales; la nueva migración opera sobre la conexión que recibe y conserva las relaciones históricas con ON DELETE RESTRICT.
@@ -56,4 +62,4 @@ Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membr
 
 ## Próximo paso
 
-La Microtarea 5 fue validada por el usuario y se cierra con este commit local. La Microtarea 6 no se inicia en esta tarea.
+La Microtarea 6 fue validada por el usuario y se cierra con este commit local. La Microtarea 7 no se inicia.

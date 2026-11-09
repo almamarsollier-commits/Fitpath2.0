@@ -22,7 +22,7 @@ class ActivityClassSchemaTests(unittest.TestCase):
         self.connection = connect_database(self.root / "activities.sqlite3")
         self.addCleanup(self.connection.close)
 
-        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2, 3, 4))
+        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2, 3, 4, 5))
         seed_initial_roles(self.connection)
 
         role_id = self.connection.execute(
@@ -168,6 +168,8 @@ class ActivityClassSchemaTests(unittest.TestCase):
                 "rutinas",
                 "ejercicios",
                 "rutina_ejercicio",
+                "progresos",
+                "planes_alimentacion",
             },
         )
         self.assertEqual(
@@ -182,6 +184,7 @@ class ActivityClassSchemaTests(unittest.TestCase):
                 (2, "0002_actividades_entrenadores_clases.sql"),
                 (3, "0003_clientes_inscripciones_asistencias.sql"),
                 (4, "0004_objetivos_rutinas.sql"),
+                (5, "0005_progreso_alimentacion.sql"),
             ),
         )
         self.assertTrue({"clientes", "inscripciones", "asistencias"}.issubset(tables))
@@ -418,7 +421,7 @@ class ActivityClassSchemaTests(unittest.TestCase):
         self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), ())
         self.assertEqual(
             self.connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0],
-            4,
+            5,
         )
         self.assertEqual(
             self.connection.execute("PRAGMA foreign_key_check").fetchall(),
