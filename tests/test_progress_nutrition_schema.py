@@ -24,7 +24,7 @@ class ProgressNutritionSchemaTests(unittest.TestCase):
         self.addCleanup(self.connection.close)
         self.assertEqual(
             apply_migrations(self.connection, MIGRATIONS_DIR),
-            (1, 2, 3, 4, 5, 6),
+            (1, 2, 3, 4, 5, 6, 7),
         )
         seed_initial_roles(self.connection)
         client_role = self.connection.execute(
@@ -226,14 +226,14 @@ class ProgressNutritionSchemaTests(unittest.TestCase):
             )
         # La pertenencia del objetivo al cliente queda pendiente y no se infiere aquí.
 
-    def test_migrations_are_idempotent_and_record_six_versions(self):
+    def test_migrations_are_idempotent_and_record_seven_versions(self):
         self.connection.commit()
         self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), ())
         self.assertEqual(
             self.connection.execute(
                 "SELECT count(*) FROM schema_migrations"
             ).fetchone()[0],
-            6,
+            7,
         )
         self.assertFalse(self.connection.in_transaction)
         self.assertEqual(

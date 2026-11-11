@@ -28,7 +28,7 @@ class IdentitySchemaTests(unittest.TestCase):
         self.database_path = self.root / "identity.sqlite3"
         self.connection = connect_database(self.database_path)
         self.addCleanup(self.connection.close)
-        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2, 3, 4, 5, 6))
+        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2, 3, 4, 5, 6, 7))
 
     def insert_role(self, name="Cliente"):
         cursor = self.connection.execute(
@@ -238,11 +238,12 @@ class IdentitySchemaTests(unittest.TestCase):
                 (4, "0004_objetivos_rutinas.sql"),
                 (5, "0005_progreso_alimentacion.sql"),
                 (6, "0006_membresias_beneficios_suscripciones_pagos.sql"),
+                (7, "0007_mantenimiento_perfiles.sql"),
             ),
         )
         self.assertEqual(
             self.connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0],
-            6,
+            7,
         )
 
     def test_altered_applied_migration_is_rejected_by_checksum(self):
