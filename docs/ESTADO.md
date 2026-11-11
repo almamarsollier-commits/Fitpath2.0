@@ -1,15 +1,15 @@
 # FitPath 2.0 — Estado del proyecto
 
-**Fecha de revisión:** 2026-11-08
+**Fecha de revisión:** 2026-11-09
 **Repositorio:** C:/Proyectos/Fitpath2.0
 **Rama:** fitpath
 **Seguimiento remoto:** origin/fitpath
 
 ## Estado de Git
 
-- La Microtarea 4 comenzó desde el commit 7c130c94031c3344120b3a22ec83fcf35bbaa71e; fitpath y origin/fitpath estaban sincronizadas.
-- docs/referencias-visuales/ ya estaba sin seguimiento y se conserva intacta.
-- No se realizó push. El cierre de la Microtarea 4 se registra en commit local.
+- Las Microtareas 4, 5 y 6 están publicadas en origin/fitpath; antes de iniciar la Microtarea 7, HEAD y origin/fitpath coincidían en e26fe60f2937a8e57441142512e1824b99fe5c0b.
+- docs/referencias-visuales/ permanece sin seguimiento y se conserva intacta.
+- Los cambios locales de las Microtareas 7, 8 y 9 permanecen sin commit; se conservan separados por migración y pruebas. docs/referencias-visuales/ sigue sin seguimiento y se conserva intacta.
 - No se instalaron dependencias.
 
 ## Estado por bloque
@@ -52,14 +52,30 @@ SQLite verifica el formato canónico UTC y el orden de inicio/fin. La conversió
 
 apy.py, server.js y gimnasio.db no se modificaron ni ejecutaron. Las pruebas usan bases temporales; la nueva migración opera sobre la conexión que recibe y conserva las relaciones históricas con ON DELETE RESTRICT.
 
-No se implementaron reservas completas, membresías, pagos, autenticación, autorización real ni endpoints privados. La Microtarea 4 ofrece solo una operación interna de inscripción, sin HTTP ni elegibilidad por membresía.
+Antes de la Microtarea 7 no había persistencia de membresías ni pagos. La Microtarea 4 ofrece solo una operación interna de inscripción, sin HTTP ni elegibilidad por membresía. No se implementa autenticación, autorización real ni endpoints privados.
+
+La Microtarea 7 agrega la migración 0006 para monedas, membresías, beneficios, suscripciones de clientes, deudas y pagos. La relación membresía-beneficio es genérica y no determina qué clases o actividades habilita. El seed controlado incorpora únicamente ARS con dos decimales; no crea planes con precios ni beneficios comerciales.
+
+Se agregó un servicio interno que registra pagos ya realizados, suma únicamente los pagos confirmados y rechaza importes que superen el saldo dentro de `BEGIN IMMEDIATE`. No cobra, no integra proveedores, no cambia pagos pendientes/anulados y no se expone por HTTP. Requiere autenticación y autorización antes de cualquier uso desde una interfaz.
+
+El usuario confirmó que la suite completa de M7 terminó satisfactoriamente desde VS Code. En este entorno no pudo repetirse porque falta Flask. La compilación y validación aislada con SQLite de memoria comprobaron migraciones, FK, pagos parciales, concurrencia, rollback e idempotencia.
+
+La Microtarea 8 agrega la migración 0007 para técnicos, jefes de sede, máquinas, tickets e historial de mantenimiento. Triggers validan que técnico y máquina coincidan en sede para tickets e historial, y bloquean cambios de sede que invalidarían registros relacionados. No imponen compatibilidad entre rol y perfil ni agregan endpoints o autorización.
+
+Las pruebas M8 usan bases temporales y cubren perfiles, sedes, estados, relaciones, historial, rollback y migraciones acumuladas. La compilación Python y la validación aislada con SQLite de memoria aplicando 0001–0007 fueron satisfactorias, incluyendo triggers, FK e idempotencia. La suite completa se intentó en este entorno, pero no pudo importar sus módulos porque falta Flask (`ModuleNotFoundError`). No se instalaron dependencias. El usuario confirmó después que ejecutó satisfactoriamente la suite acumulada desde VS Code en C:/Proyectos/Fitpath2.0.
+
+La Microtarea 9 agrega la migración 0008 para `remuneraciones`. UNIQUE(clase_id) implementa la cardinalidad aprobada de cero o una fila por clase; el importe se guarda como entero en unidades monetarias menores y la moneda referencia `monedas`. CHECK valida los estados y exige fecha UTC solo para liquidaciones completadas. Triggers bloquean la reasignación del entrenador de una clase con remuneración, el cambio de clase de una remuneración y su eliminación; las anulaciones conservan la fila histórica.
+
+La validación aislada de SQLite con una base temporal aplicó 0001–0008, revisó idempotencia, FK, restricciones, protección histórica y rollback sin errores. La suite completa se intentó en este entorno, pero los módulos no pudieron importarse porque falta Flask (`ModuleNotFoundError`). No se instalaron dependencias. El usuario confirmó después que ejecutó satisfactoriamente la suite acumulada desde VS Code en C:/Proyectos/Fitpath2.0.
+
+Las tablas principales del modelo propuesto están implementadas en las migraciones 0001–0008. Esto no completa el Bloque 2: siguen pendientes reglas de negocio, servicios de aplicación, autenticación/autorización y APIs.
 
 ## Decisiones aprobadas y pendientes
 
-Siguen vigentes las 15 decisiones arquitectónicas originales y los acuerdos complementarios. También permanecen registradas las cuatro aprobaciones recientes del modelo.
+Siguen vigentes las 15 decisiones arquitectónicas originales y los acuerdos complementarios. Se suma la decisión aprobada el 2026-11-09: una clase genera como máximo una remuneración, identificada por `UNIQUE(clase_id)`; el entrenador se deriva de la clase y no puede reasignarse después de registrar esa remuneración.
 
-Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membresía; autorización del entrenador para registrar asistencia; tratamiento de clases e inscripciones canceladas; conversión de horarios locales a UTC; solapamientos de disponibilidad; y normalización Unicode de nombres de actividades.
+Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membresía; autorización del entrenador para registrar asistencia; tratamiento de clases e inscripciones canceladas; pertenencia del objetivo al cliente en rutinas y planes de alimentación; conversión de horarios locales a UTC; solapamientos de disponibilidad; normalización Unicode de nombres de actividades; asignación y autorización entre entrenador y cliente; e identificador de inicio de sesión.
 
 ## Próximo paso
 
-La Microtarea 6 fue validada por el usuario y se cierra con este commit local. La Microtarea 7 no se inicia.
+La suite acumulada fue confirmada como satisfactoria desde VS Code. Se preparan los commits independientes de M7, M8 y M9; el Bloque 2 conserva reglas, servicios, autenticación/autorización y APIs pendientes.

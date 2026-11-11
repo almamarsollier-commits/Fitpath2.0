@@ -25,7 +25,7 @@ class ObjectiveRoutineSchemaTests(unittest.TestCase):
         self.addCleanup(self.connection.close)
         self.assertEqual(
             apply_migrations(self.connection, MIGRATIONS_DIR),
-            (1, 2, 3, 4, 5, 6, 7),
+            (1, 2, 3, 4, 5, 6, 7, 8),
         )
         seed_initial_roles(self.connection)
         self.client_role_id = self.role_id("Cliente")
@@ -332,14 +332,14 @@ class ObjectiveRoutineSchemaTests(unittest.TestCase):
         with self.assertRaises(sqlite3.IntegrityError):
             self.add_routine_exercise(routine_id, 999999, order=2)
 
-    def test_migrations_are_idempotent_and_registry_has_seven_versions(self):
+    def test_migrations_are_idempotent_and_registry_has_eight_versions(self):
         self.connection.commit()
         self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), ())
         self.assertEqual(
             self.connection.execute(
                 "SELECT count(*) FROM schema_migrations"
             ).fetchone()[0],
-            7,
+            8,
         )
         self.assertEqual(
             self.connection.execute("PRAGMA foreign_key_check").fetchall(), []

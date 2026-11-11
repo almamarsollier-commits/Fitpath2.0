@@ -74,7 +74,7 @@ Estas ocho decisiones se aprueban para el MVP visual y no modifican los 15 acuer
 4. La interfaz usa los nombres Gratuita y Premium.
 5. Alimentación, pagos y remuneraciones muestran datos simulados. No hay pagos reales ni persistencia/integración real en este bloque.
 6. Las decisiones arquitectónicas aprobadas prevalecen en su ámbito. Para requisitos funcionales, el SRS es la fuente principal; Story Mapping y diagramas complementan y verifican flujos. Las contradicciones se documentan.
-7. La revisión visual detallada de cardinalidades se realizó para preparar la propuesta del Bloque 2; la implementación sigue sujeta a la aprobación del esquema.
+7. La revisión visual detallada de cardinalidades preparó la propuesta del Bloque 2; el esquema fue aprobado e incorporado gradualmente mediante las migraciones 0001–0008. Las reglas y servicios restantes continúan sujetos a sus decisiones específicas.
 8. El MVP es responsive, accesible, mantiene navegación consistente y usa HTML, CSS y JavaScript Vanilla.
 
 ## 3. Aplicación de fuentes y contradicciones relevantes
@@ -83,7 +83,7 @@ Estas ocho decisiones se aprueban para el MVP visual y no modifican los 15 acuer
 - **Mantenimiento del Administrador:** el SRS asigna la operación de tickets y cambios de estado al Técnico; el alcance aprobado incorpora supervisión para el Administrador. El panel de Administración muestra el estado y los tickets; las modificaciones quedan en el perfil Técnico.
 - **Nombres de membresía:** el caso de uso menciona Amateur/Pro y el SRS Gratuita/Premium. Para el Bloque 1 prevalece la decisión aprobada Gratuita/Premium; la diferencia de la fuente queda registrada.
 - **Identificador de acceso:** SRS, Story Mapping, casos de uso y ER no coinciden entre nombre de usuario y email. No bloquea el Bloque 1 porque no habrá autenticación real. Se resolverá antes del Bloque 3.
-- **Clases y cupos:** el modelo aprobado define ACTIVIDAD como tipo y CLASE como sesión; el cupo, horario e inscripción se presentan por Clase. Las cardinalidades se revisaron visualmente al preparar la propuesta del Bloque 2; la implementación sigue pendiente de aprobación.
+- **Clases y cupos:** el modelo aprobado define ACTIVIDAD como tipo y CLASE como sesión; el cupo, horario e inscripción se presentan por Clase. Las cardinalidades se revisaron visualmente y el esquema correspondiente quedó implementado en las migraciones 0002 y 0003; las reglas de membresía y autorización siguen pendientes.
 - **Alimentación y pagos:** se consultan datos simulados; no se incorporan pagos reales, proveedores, backend ni persistencia en el Bloque 1.
 
 Estas reglas aplican la jerarquía funcional aprobada y el alcance explícito del usuario. No cambian los modelos arquitectónicos previos.
@@ -95,7 +95,7 @@ No bloquean el MVP visual:
 - Identificador de acceso y vínculo entre cuentas locales y Google OAuth: antes del Bloque 3.
 - Alta y asignación de perfiles del personal: antes de implementar autenticación y administración persistente.
 - Métodos, proveedor y flujo de pagos reales: antes de implementar pagos persistentes. Los estados internos del modelo quedaron aprobados para el esquema.
-- Revisión visual de cardinalidades y relaciones de los diagramas: completada para preparar la propuesta del Bloque 2; la implementación del esquema sigue pendiente de aprobación.
+- Revisión visual de cardinalidades y relaciones de los diagramas: completada para preparar la propuesta del Bloque 2; las tablas principales del esquema se incorporaron mediante las migraciones 0001–0008 y permanecen pendientes reglas de negocio y servicios.
 - Verificación de concurrencia, tiempos de respuesta y disponibilidad: al definir backend y entorno de ejecución.
 - Alcance de archivos en S3, flujos de Calendar y agente de IA: antes de sus respectivos bloques.
 
@@ -107,9 +107,13 @@ No bloquean el MVP visual:
 - La moneda inicial será ARS en un catálogo extensible.
 - Se aprueban los estados iniciales propuestos, manteniendo separados los estados del catálogo (activa/habilitada), suscripción (activa, vencida, cancelada), inscripción (activa, cancelada), clase (programada, cancelada, realizada), máquina (operativa, en_reparacion, fuera_de_servicio), pago (en_proceso, realizado, anulado), ticket (abierto, en_proceso, resuelto, cancelado) y liquidación (pendiente, liquidada, anulada).
 
+### Decisión aprobada sobre remuneraciones (2026-11-09)
+
+- Una clase puede generar como máximo una remuneración: `remuneraciones.clase_id` es único. Una clase puede no tener remuneración; una remuneración anulada permanece en el historial y no habilita crear otra para esa clase.
+- El entrenador destinatario se obtiene de la clase. Una vez creada la remuneración, la base impide reasignar el entrenador de esa clase y cambiar la remuneración a otra clase.
+
 ### Decisiones pendientes antes de implementar sus módulos
 
-- Cardinalidad de remuneraciones por clase y regla para evitar duplicados.
 - Relación entre beneficios de membresía y las clases o actividades que habilitan.
 - Restricciones que garanticen la compatibilidad entre rol y perfil también ante escrituras directas en la base.
 - Identificador de inicio de sesión: email, nombre de usuario o ambos; resolver antes del Bloque 3.
