@@ -1,15 +1,15 @@
 # FitPath 2.0 — Estado del proyecto
 
-**Fecha de revisión:** 2026-11-09
+**Fecha de revisión:** 2026-11-11
 **Repositorio:** C:/Proyectos/Fitpath2.0
 **Rama:** fitpath
 **Seguimiento remoto:** origin/fitpath
 
 ## Estado de Git
 
-- Las Microtareas 4, 5 y 6 están publicadas en origin/fitpath; antes de iniciar la Microtarea 7, HEAD y origin/fitpath coincidían en e26fe60f2937a8e57441142512e1824b99fe5c0b.
+- Las Microtareas 1–9 están implementadas y publicadas en origin/fitpath. Los commits de M7, M8 y M9 son 469b7b3eb31a1f38ea2bc515f1f9694a4067c380, 64c5dff8145c11e42cbb14a4eab4bddaabdc83f8 y 4ea57dce64f47353c0f4b5365297ddb88f68e0f9. HEAD y origin/fitpath coinciden en el commit de M9.
+- El commit d80e3286129b06b7127266a97bc72a57a2cbfa15, que elimina statics/js/fitpath.js, fue conservado y aprobado por el usuario; el archivo no se restauró.
 - docs/referencias-visuales/ permanece sin seguimiento y se conserva intacta.
-- Los cambios locales de las Microtareas 7, 8 y 9 permanecen sin commit; se conservan separados por migración y pruebas. docs/referencias-visuales/ sigue sin seguimiento y se conserva intacta.
 - No se instalaron dependencias.
 
 ## Estado por bloque
@@ -60,15 +60,28 @@ Se agregó un servicio interno que registra pagos ya realizados, suma únicament
 
 El usuario confirmó que la suite completa de M7 terminó satisfactoriamente desde VS Code. En este entorno no pudo repetirse porque falta Flask. La compilación y validación aislada con SQLite de memoria comprobaron migraciones, FK, pagos parciales, concurrencia, rollback e idempotencia.
 
-La Microtarea 8 agrega la migración 0007 para técnicos, jefes de sede, máquinas, tickets e historial de mantenimiento. Triggers validan que técnico y máquina coincidan en sede para tickets e historial, y bloquean cambios de sede que invalidarían registros relacionados. No imponen compatibilidad entre rol y perfil ni agregan endpoints o autorización.
+La Microtarea 8 agrega la migración 0007 para técnicos, jefes de sede, máquinas, tickets e historial de mantenimiento. Triggers validan que técnico y máquina coincidan en sede para tickets e historial, y bloquean cambios de sede que invalidarían registros relacionados. No imponen compatibilidad entre rol y perfil ni agregan endpoints o autorización. Su commit está publicado en origin/fitpath.
 
 Las pruebas M8 usan bases temporales y cubren perfiles, sedes, estados, relaciones, historial, rollback y migraciones acumuladas. La compilación Python y la validación aislada con SQLite de memoria aplicando 0001–0007 fueron satisfactorias, incluyendo triggers, FK e idempotencia. La suite completa se intentó en este entorno, pero no pudo importar sus módulos porque falta Flask (`ModuleNotFoundError`). No se instalaron dependencias. El usuario confirmó después que ejecutó satisfactoriamente la suite acumulada desde VS Code en C:/Proyectos/Fitpath2.0.
 
-La Microtarea 9 agrega la migración 0008 para `remuneraciones`. UNIQUE(clase_id) implementa la cardinalidad aprobada de cero o una fila por clase; el importe se guarda como entero en unidades monetarias menores y la moneda referencia `monedas`. CHECK valida los estados y exige fecha UTC solo para liquidaciones completadas. Triggers bloquean la reasignación del entrenador de una clase con remuneración, el cambio de clase de una remuneración y su eliminación; las anulaciones conservan la fila histórica.
+La Microtarea 9 agrega la migración 0008 para `remuneraciones`. UNIQUE(clase_id) implementa la cardinalidad aprobada de cero o una fila por clase; el importe se guarda como entero en unidades monetarias menores y la moneda referencia `monedas`. CHECK valida los estados y exige fecha UTC solo para liquidaciones completadas. Triggers bloquean la reasignación del entrenador de una clase con remuneración, el cambio de clase de una remuneración y su eliminación; las anulaciones conservan la fila histórica. Su commit está publicado en origin/fitpath.
 
 La validación aislada de SQLite con una base temporal aplicó 0001–0008, revisó idempotencia, FK, restricciones, protección histórica y rollback sin errores. La suite completa se intentó en este entorno, pero los módulos no pudieron importarse porque falta Flask (`ModuleNotFoundError`). No se instalaron dependencias. El usuario confirmó después que ejecutó satisfactoriamente la suite acumulada desde VS Code en C:/Proyectos/Fitpath2.0.
 
 Las tablas principales del modelo propuesto están implementadas en las migraciones 0001–0008. Esto no completa el Bloque 2: siguen pendientes reglas de negocio, servicios de aplicación, autenticación/autorización y APIs.
+
+## Consolidación de la base de desarrollo (2026-11-11)
+
+- Se creó `backend/instance/fitpath-development.sqlite3` luego de confirmar que no existía, que estaba separada de `gimnasio.db` y que `/backend/instance/` está excluida de Git.
+- El entorno no tiene Flask. Para no instalar dependencias, se invocaron directamente las funciones existentes `apply_migrations()` y `seed_initial_roles()` / `seed_initial_currencies()` desde Python estándar; no se creó otro migrador. La primera ejecución aplicó 0001–0008; la segunda no aplicó cambios. Se registraron las ocho versiones.
+- Verificaciones SQLite: claves foráneas activas en la conexión de migración; `foreign_key_check` vacío; `integrity_check` correcto; existen las 35 tablas de negocio y `schema_migrations` (36 tablas en total). El seed contiene solo los cinco roles aprobados y ARS con dos decimales; no hay usuarios, permisos ni asignaciones de permisos.
+- `gimnasio.db` se inspeccionó en modo de solo lectura: contiene `socios` y `usuarios`, su integridad es correcta y su tamaño y fecha de modificación no cambiaron.
+- La inspección estática confirma que `create_app()` no abre la base, no ejecuta migraciones ni seeds y no registra blueprints; la conexión está diseñada para abrirse bajo demanda y cerrarse al finalizar el contexto. También rechaza la ruta de `gimnasio.db`. En la reverificación de cierre, la importación de `create_app()` falló porque Flask no está instalado en el Python del sistema ni en `.venv`; la conexión real y el cierre por contexto quedan sin validar en este entorno.
+- Se reabrió la base de desarrollo en solo lectura: contiene las versiones 0001–0008, `PRAGMA foreign_key_check` no encontró inconsistencias y `PRAGMA integrity_check` devolvió `ok`. Esta comprobación no valida la conexión Flask.
+- `python -m unittest discover -s tests -v` no pudo importar las pruebas porque falta Flask (`ModuleNotFoundError`); los módulos detectados fallaron durante la carga, por lo que no se considera aprobada ni ejecutada la suite funcional. Los tests existentes usan directorios temporales. No se instalaron dependencias.
+- No se implementaron APIs ni autenticación. `apy.py` y `server.js` no se ejecutaron ni modificaron. La integración de Flask y la suite completa quedan pendientes de validación en un entorno con los requisitos instalados.
+- Los archivos heredados identificados siguen conservados: `apy.py`, los cuatro templates antiguos, `statics/js/modules/cliente.js`, `templates/cliente.html`, `server.js`, `gimnasio.db` y las configuraciones/dependencias. `statics/js/fitpath.js` permanece eliminado por decisión aprobada. No se realizó la limpieza porque Flask y la suite no pudieron validarse en este entorno.
+- Las APIs REST públicas quedan a cargo de otro colaborador y deben desarrollarse sobre la fábrica Flask nueva. Autenticación y autorización reales continúan pendientes; el selector demo no concede permisos.
 
 ## Decisiones aprobadas y pendientes
 
@@ -78,4 +91,4 @@ Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membr
 
 ## Próximo paso
 
-La suite acumulada fue confirmada como satisfactoria desde VS Code. Se preparan los commits independientes de M7, M8 y M9; el Bloque 2 conserva reglas, servicios, autenticación/autorización y APIs pendientes.
+El próximo objetivo es desarrollar la primera API REST pública sobre Flask, a cargo del colaborador de APIs, después de validar Flask–SQLite en un intérprete con Flask disponible. Mantener fuera del alcance las operaciones privadas hasta resolver autenticación, autorización y las reglas de negocio pendientes. El Bloque 2 no está completo.
