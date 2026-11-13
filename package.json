@@ -20,7 +20,9 @@
   "homepage": "https://github.com/almamarsollier-commits/Fitpath2.0#readme",
   "dependencies": {
     "better-sqlite3": "^13.0.3",
+    "dotenv": "^18.0.10",
     "express": "^5.3.0",
+    "mercadopago": "^3.6.2",
     "sqlite3": "^6.0.1"
   }
 }

@@ -2,6 +2,21 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
+require('dotenv').config();
+
+const { MercadoPagoConfig, Preference } = require('mercadopago');
+
+const mpClient = new MercadoPagoConfig({
+    accessToken: process.env.MP_ACCESS_TOKEN
+});
+
+const preference = new Preference(mpClient);
+if (!process.env.MP_ACCESS_TOKEN || !process.env.MP_PUBLIC_KEY) {
+    console.error('Faltan las credenciales de Mercado Pago en el archivo .env');
+    process.exit(1);
+}
+
+console.log('Credenciales de Mercado Pago cargadas correctamente.');
 const app = express();
 const PORT = 3000;
 
