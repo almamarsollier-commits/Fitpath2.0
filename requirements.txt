@@ -1,4 +1,5 @@
 Flask
-Authlib
+Authlib==1.9.5
+requests==2.34.2
 boto3
 python-dotenv

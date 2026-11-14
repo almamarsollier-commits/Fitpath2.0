@@ -100,4 +100,25 @@ Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membr
 
 ## Próximo paso
 
-M10 queda verificada. El siguiente bloque es M11 Google Auth. Propuesta para revisión antes de implementarlo: aceptar únicamente identidades Google ya vinculadas administrativamente a usuarios existentes, usando `issuer` y `sub`; no crear cuentas automáticamente, no vincular por coincidencia de email y no derivar roles del proveedor. Falta acordar quién establece ese vínculo. El Bloque 2 continúa sin APIs implementadas.
+El primer paso pendiente es completar la verificación real de M11 descrita a continuación. No declarar la autenticación integrada hasta que el servidor Flask efectivo sirva las rutas nuevas y el flujo sea comprobado en Chrome.
+
+## M11 — Pendiente de verificación real (2026-11-14)
+
+- Google Auth permitió autenticar la cuenta y vincularla al usuario FitPath ID 1, rol Cliente.
+- `GET /auth/me` devolvió `authenticated: true` para esa sesión.
+- La suite completa anterior informó 111 pruebas aprobadas.
+- Las últimas seis pruebas puntuales de integración de acceso al Cliente, navegación, autorización y logout aprobaron.
+- Se implementó `/auth/cliente`, las vistas Cliente protegidas por sesión y rol, y el logout POST con CSRF.
+- **Bloqueo real: `/auth/cliente` todavía devuelve HTTP 404 en el servidor `localhost:5000`.**
+- Se detectaron procesos Flask antiguos sin recarga automática; no se confirmó que el servidor efectivo utilice este checkout.
+- El acceso visual al dashboard Cliente y el logout real en Chrome todavía no están verificados.
+- La suite completa de 111 pruebas no se repitió tras la integración de las vistas Cliente; los cambios posteriores se validaron con las seis pruebas puntuales mencionadas.
+- M11 no debe declararse completamente terminada hasta resolver el 404 y completar la comprobación visual y de logout.
+
+### Recuperación al retomar
+
+1. Confirmar carpeta, intérprete y proceso que escucha el puerto 5000.
+2. Comparar `flask routes` con las rutas del servidor efectivo.
+3. Corregir exclusivamente la causa del 404.
+4. Probar el panel Cliente, el logout y que `/auth/me` devuelva 401 después del logout.
+5. Continuar con M12, AWS S3 y el asistente de IA.

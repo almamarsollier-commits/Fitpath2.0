@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 
 
@@ -14,9 +15,20 @@ class BaseConfig:
     MIGRATIONS_DIR = MIGRATIONS_PATH
     SQLITE_TIMEOUT = 5.0
     TESTING = False
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+    GOOGLE_REDIRECT_URI = os.environ.get(
+        "GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback"
+    )
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = True
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
 
 
 class DevelopmentConfig(BaseConfig):
+    SESSION_COOKIE_SECURE = False  # Solo para localhost HTTP en desarrollo.
     DATABASE = Path(
         os.environ.get(
             "FITPATH_DEV_DATABASE",
@@ -27,6 +39,7 @@ class DevelopmentConfig(BaseConfig):
 
 class TestingConfig(BaseConfig):
     TESTING = True
+    SESSION_COOKIE_SECURE = False
     DATABASE = Path(
         os.environ.get(
             "FITPATH_TEST_DATABASE",

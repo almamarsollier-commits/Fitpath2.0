@@ -93,7 +93,9 @@ function renderSidebar(activeSection) {
   const user = element("div", "fp-client-side-heading");
   user.append(element("span", "fp-client-avatar", clienteDemo.profile.initials));
   const userText = element("span");
-  userText.append(element("strong", "", "Espacio Cliente"), element("small", "", "Perfil ficticio"));
+  const identityLabel = element("small", "", "Sesión Cliente");
+  identityLabel.dataset.fitpathIdentity = "";
+  userText.append(element("strong", "", "Espacio Cliente"), identityLabel);
   user.append(userText);
 
   const nav = element("nav", "fp-primary-nav fp-client-nav");
@@ -113,7 +115,26 @@ function renderSidebar(activeSection) {
   const bottom = element("div", "fp-sidebar-bottom");
   const tip = element("div", "fp-client-side-tip");
   tip.append(element("span", "", "✳"), element("p", "", "Un paso a la vez. Tu constancia también cuenta."));
-  bottom.append(tip);
+  const logoutStatus = element("p", "fp-client-logout-status");
+  logoutStatus.dataset.clientLogoutStatus = "";
+  logoutStatus.setAttribute("role", "status");
+  logoutStatus.setAttribute("aria-live", "polite");
+  logoutStatus.hidden = true;
+
+  const logoutForm = element("form", "fp-client-logout-form");
+  logoutForm.action = "/auth/logout";
+  logoutForm.method = "post";
+  logoutForm.dataset.clientLogoutForm = "";
+  const csrfInput = document.createElement("input");
+  csrfInput.type = "hidden";
+  csrfInput.name = "csrf_token";
+  const logoutButton = element("button", "fp-button fp-button-primary fp-client-logout-button", "Cerrar sesión");
+  logoutButton.type = "submit";
+  logoutButton.disabled = true;
+  logoutButton.dataset.clientLogoutButton = "";
+  logoutForm.append(csrfInput, logoutButton);
+
+  bottom.append(tip, logoutStatus, logoutForm);
   const version = element("p", "fp-sidebar-version", "FITPATH 2.0 · DEMO CLIENTE");
   bottom.append(version);
   sidebar.replaceChildren(brandRow, user, nav, bottom);
@@ -164,3 +185,93 @@ initializeDrawer({
   close: document.querySelector("[data-menu-close]"),
   overlay: document.querySelector("[data-menu-overlay]")
 });
+
+async function initializeFitPathSession() {
+  const logoutForm = document.querySelector("[data-client-logout-form]");
+  const csrfInput = logoutForm?.elements.namedItem("csrf_token");
+  const logoutButton = document.querySelector("[data-client-logout-button]");
+  const logoutStatus = document.querySelector("[data-client-logout-status]");
+
+  try {
+    const response = await fetch("/auth/me", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (response.status === 401) {
+      window.location.replace("/auth/login");
+      return;
+    }
+    if (!response.ok) throw new Error("session_check_failed");
+
+    const identity = await response.json();
+    if (!identity.authenticated || !identity.csrf_token || !identity.user || identity.user.rol !== "Cliente") {
+      window.location.replace("/auth/login");
+      return;
+    }
+
+    const fullName = `${identity.user.nombre} ${identity.user.apellido}`.trim();
+    const profileName = document.querySelector('.fp-user-chip [data-demo-text="profile.name"]');
+    const profileAvatar = document.querySelector(".fp-user-chip .fp-avatar");
+    const identityLabel = document.querySelector("[data-fitpath-identity]");
+    if (profileName) profileName.textContent = fullName;
+    if (profileAvatar) {
+      profileAvatar.textContent = `${identity.user.nombre[0] ?? ""}${identity.user.apellido[0] ?? ""}`.toUpperCase();
+    }
+    if (identityLabel) identityLabel.textContent = `${identity.user.rol} · ID FitPath ${identity.user.id}`;
+    if (csrfInput) csrfInput.value = identity.csrf_token;
+    if (logoutButton) logoutButton.disabled = false;
+
+    logoutForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const csrfToken = csrfInput?.value;
+      if (!csrfToken) {
+        if (logoutStatus) {
+          logoutStatus.textContent = "No pudimos validar la sesión. Volvé a intentar.";
+          logoutStatus.hidden = false;
+        }
+        return;
+      }
+
+      if (logoutButton) logoutButton.disabled = true;
+      if (logoutStatus) {
+        logoutStatus.textContent = "Cerrando sesión…";
+        logoutStatus.hidden = false;
+      }
+
+      try {
+        const logoutResponse = await fetch("/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            Accept: "text/html",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+          },
+          body: new URLSearchParams({ csrf_token: csrfToken })
+        });
+        if (!logoutResponse.ok) throw new Error("logout_failed");
+
+        const verification = await fetch("/auth/me", {
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { Accept: "application/json" }
+        });
+        if (verification.status !== 401) throw new Error("session_still_active");
+        window.location.assign("/auth/login?logout=1");
+      } catch (_error) {
+        if (logoutButton) logoutButton.disabled = false;
+        if (logoutStatus) {
+          logoutStatus.textContent = "No pudimos cerrar la sesión. Volvé a intentar.";
+          logoutStatus.hidden = false;
+        }
+      }
+    });
+  } catch (_error) {
+    if (logoutStatus) {
+      logoutStatus.textContent = "No pudimos comprobar la sesión FitPath.";
+      logoutStatus.hidden = false;
+    }
+  }
+}
+
+initializeFitPathSession();

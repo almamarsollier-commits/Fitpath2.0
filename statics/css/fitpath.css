@@ -477,6 +477,9 @@ h1, h2, h3 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacing: -.04
   text-align: right;
 }
 .fp-showcase .fp-sidebar-bottom { margin-top: auto; padding-top: 1.7rem; }
+.fp-showcase .fp-client-logout-form { margin-top: 0.75rem; }
+.fp-showcase .fp-client-logout-form .fp-button { width: 100%; justify-content: center; }
+.fp-showcase .fp-client-logout-status { margin: 0.5rem 0 0; color: #c9d3d8; font-size: 0.68rem; line-height: 1.45; }
 .fp-showcase .fp-demo-status {
   display: flex;
   align-items: center;

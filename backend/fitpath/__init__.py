@@ -9,7 +9,7 @@ from .database import close_db
 
 
 def create_app(config_name=None, test_config=None):
-    """Crea la aplicación sin abrir la base de datos ni registrar rutas privadas."""
+    """Crea la app sin abrir SQLite; registra autenticación y vistas Cliente."""
     app = Flask(__name__, static_folder=None)
     app.config.from_object(get_config(config_name))
 
@@ -22,4 +22,8 @@ def create_app(config_name=None, test_config=None):
     app.config["DATABASE"] = os.fspath(app.config["DATABASE"])
     app.config["MIGRATIONS_DIR"] = os.fspath(app.config["MIGRATIONS_DIR"])
     app.teardown_appcontext(close_db)
+
+    from .auth import init_auth
+
+    init_auth(app)
     return app

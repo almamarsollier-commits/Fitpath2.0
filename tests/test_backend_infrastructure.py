@@ -26,7 +26,7 @@ class BackendInfrastructureTests(unittest.TestCase):
             {"DATABASE": str(database_path)},
         )
 
-    def test_factory_separates_environments_and_registers_no_routes(self):
+    def test_factory_separates_environments_and_registers_auth_and_client_routes(self):
         default_development_app = create_app("development")
         default_testing_app = create_app("testing")
         self.assertNotEqual(
@@ -48,7 +48,21 @@ class BackendInfrastructureTests(unittest.TestCase):
             Path(testing_app.config["DATABASE"]).resolve(),
         )
         self.assertTrue(testing_app.config["TESTING"])
-        self.assertEqual(list(testing_app.url_map.iter_rules()), [])
+        self.assertEqual(
+            {rule.rule for rule in testing_app.url_map.iter_rules()},
+            {
+                "/auth/static/<path:filename>",
+                "/auth/login",
+                "/auth/google/login",
+                "/auth/google/callback",
+                "/auth/me",
+                "/auth/logout",
+                "/auth/cliente",
+                "/templates/cliente/<path:filename>",
+                "/templates/landing.html",
+                "/statics/<path:filename>",
+            },
+        )
         self.assertFalse(development_database.exists())
         self.assertFalse(testing_database.exists())
 

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Ingresar | FitPath</title>
+  <link rel="stylesheet" href="{{ url_for('auth.static', filename='css/fitpath.css') }}">
+</head>
+<body class="auth-page">
+  <main class="auth-layout">
+    <section class="auth-visual" aria-label="FitPath">
+      <a class="brand brand-light" href="/auth/login" aria-label="FitPath, inicio">
+        <span class="brand-mark">f</span><span>fitpath<span class="brand-dot">.</span></span>
+      </a>
+      <div class="visual-content">
+        <span class="eyebrow eyebrow-light">TU BIENESTAR, EN MOVIMIENTO</span>
+        <h1>Un paso a la vez.<br><span>Un cambio real.</span></h1>
+        <p>Entrená a tu ritmo y seguí avanzando con tu equipo.</p>
+      </div>
+      <div class="visual-bottom"><span class="visual-line"></span><span>Tu camino, tus objetivos.</span></div>
+      <div class="decor decor-one"></div><div class="decor decor-two"></div>
+    </section>
+    <section class="auth-panel">
+      <div class="auth-card">
+        <div class="auth-heading">
+          <span class="eyebrow">ACCESO SEGURO</span>
+          <h2>Ingresá a FitPath.</h2>
+          <p>Usá la cuenta de Google que fue vinculada previamente por el equipo.</p>
+        </div>
+        {% if error %}
+          <p class="form-message message-error" role="alert">
+            {% if error == 'account_inactive' %}La cuenta FitPath está desactivada. Contactá a tu sede.
+            {% elif error == 'auth_unavailable' or error == 'provider_unavailable' %}El acceso con Google no está configurado todavía.
+            {% else %}No pudimos completar el acceso. Volvé a intentarlo o contactá a tu sede.{% endif %}
+          </p>
+        {% endif %}
+        <a id="google-login-link" class="button button-primary button-full" href="{{ url_for('auth.google_login') }}"{% if auth_identity %} hidden{% endif %}>
+          <span aria-hidden="true">G</span> Continuar con Google
+        </a>
+        <section id="authenticated-session" class="auth-form" aria-live="polite"{% if not auth_identity %} hidden{% endif %}>
+          <p id="session-summary" class="form-note">{% if auth_identity %}Sesión iniciada como {{ auth_identity.user.nombre }} {{ auth_identity.user.apellido }} · {{ auth_identity.user.rol }} (ID FitPath {{ auth_identity.user.id }}).{% endif %}</p>
+          {% if auth_identity and auth_identity.user.rol == 'Cliente' %}
+            <a id="client-home-link" class="button button-primary button-full" href="{{ url_for('client_views.client_home') }}">Ir al inicio Cliente</a>
+          {% endif %}
+          <form id="logout-form" method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ auth_identity.csrf_token if auth_identity else '' }}">
+            <button id="logout-button" class="button button-primary button-full" type="submit">Cerrar sesión</button>
+          </form>
+        </section>
+        <p id="auth-session-result" class="form-message" role="status" aria-live="polite">{% if logout_success %}Sesión cerrada correctamente. Ya podés volver a ingresar.{% elif not auth_identity and not error %}No hay una sesión activa. Continuá con Google para ingresar.{% endif %}</p>
+        <p class="form-note">No se crean cuentas nuevas. Tu rol y estado los administra FitPath.</p>
+        <div class="auth-footer"><span class="tiny-leaf">✳</span> Bienestar que se construye todos los días.</div>
+      </div>
+    </section>
+  </main>
+  <script src="{{ url_for('auth.static', filename='js/auth-session.js', v='m11-state-2') }}" defer></script>
+</body>
+</html>
