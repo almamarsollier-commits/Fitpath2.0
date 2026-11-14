@@ -83,6 +83,15 @@ Las tablas principales del modelo propuesto están implementadas en las migracio
 - Los archivos heredados identificados siguen conservados: `apy.py`, los cuatro templates antiguos, `statics/js/modules/cliente.js`, `templates/cliente.html`, `server.js`, `gimnasio.db` y las configuraciones/dependencias. `statics/js/fitpath.js` permanece eliminado por decisión aprobada. No se realizó la limpieza porque Flask y la suite no pudieron validarse en este entorno.
 - Las APIs REST públicas quedan a cargo de otro colaborador y deben desarrollarse sobre la fábrica Flask nueva. Autenticación y autorización reales continúan pendientes; el selector demo no concede permisos.
 
+## Verificación final de M10 (2026-11-13)
+
+- El `.venv` del repositorio usa Python 3.15.2. Flask faltaba en ese entorno; se instaló solo `Flask==3.1.3`, ya declarado en `requirements.txt` y verificado compatible con esta versión de Python. El manifiesto no se modificó y mantiene dependencias sin versiones fijadas.
+- `create_app("development")` y la conexión Flask real fueron validados. La ruta efectiva es `backend/instance/fitpath-development.sqlite3`; cada conexión activa claves foráneas y el teardown la cierra. Las migraciones 0001–0008 estaban aplicadas; no se reaplicaron. `foreign_key_check` no reportó filas y `integrity_check` devolvió `ok`.
+- Los cinco roles están cargados; las funciones de seed y `python -m backend.seed --help` están disponibles. La factory no registra rutas todavía.
+- `python -m unittest discover -s tests -v`: 96 pruebas, 69.969 s, `OK`. Los tests usan bases temporales. El SHA-256 de la base de desarrollo permaneció idéntico; `gimnasio.db` no se abrió ni modificó.
+- `backend` no importa ni inicia `apy.py` o `server.js`; `database.py` rechaza `gimnasio.db` y la suite comprueba esa protección. Los tres prototipos se conservaron.
+- En el backend activo no hay rutas OAuth, configuración Google ni `.env`; Authlib figura en el manifiesto, pero no se utiliza. No se implementaron APIs, OAuth, frontend ni cambios de esquema.
+
 ## Decisiones aprobadas y pendientes
 
 Siguen vigentes las 15 decisiones arquitectónicas originales y los acuerdos complementarios. Se suma la decisión aprobada el 2026-11-09: una clase genera como máximo una remuneración, identificada por `UNIQUE(clase_id)`; el entrenador se deriva de la clase y no puede reasignarse después de registrar esa remuneración.
@@ -91,4 +100,4 @@ Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membr
 
 ## Próximo paso
 
-El próximo objetivo es desarrollar la primera API REST pública sobre Flask, a cargo del colaborador de APIs, después de validar Flask–SQLite en un intérprete con Flask disponible. Mantener fuera del alcance las operaciones privadas hasta resolver autenticación, autorización y las reglas de negocio pendientes. El Bloque 2 no está completo.
+M10 queda verificada. El siguiente bloque es M11 Google Auth. Propuesta para revisión antes de implementarlo: aceptar únicamente identidades Google ya vinculadas administrativamente a usuarios existentes, usando `issuer` y `sub`; no crear cuentas automáticamente, no vincular por coincidencia de email y no derivar roles del proveedor. Falta acordar quién establece ese vínculo. El Bloque 2 continúa sin APIs implementadas.

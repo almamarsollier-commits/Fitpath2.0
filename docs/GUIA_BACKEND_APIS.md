@@ -35,9 +35,8 @@ Desde PowerShell, en la raíz del repositorio, se puede preparar un entorno aisl
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install Flask
-python -c "import flask; print(flask.__file__)"
+.\.venv\Scripts\python.exe -m pip install "Flask==3.1.3"
+.\.venv\Scripts\python.exe -c "import importlib.metadata; print(importlib.metadata.version('Flask'))"
 ```
 
 Para iniciar el servidor de desarrollo con la fábrica oficial:
@@ -99,7 +98,7 @@ with app.app_context():
 
 Usá parámetros (`?`) para todo valor dinámico. No interpolés valores del request dentro del SQL. No conserves conexiones globales ni uses `gimnasio.db`; `connect_database()` rechaza explícitamente esa ruta.
 
-**Estado de validación:** existen las 35 tablas de negocio y el registro `schema_migrations` contiene 0001–0008. La base pasó la verificación SQLite de integridad y claves foráneas. La conexión Flask real y su cierre por contexto siguen pendientes de validación en un intérprete con Flask disponible; no se deben presentar como comprobados hasta ejecutar las pruebas.
+**Estado de validación (2026-11-13):** con `.venv` (Python 3.15.2, Flask 3.1.3 y SQLite 3.53.4), `create_app("development")` se importó y creó la aplicación; `get_db()` abrió la base configurada, activó `PRAGMA foreign_keys = 1` y cerró la conexión al terminar el contexto. El registro tiene 0001–0008, `foreign_key_check` está vacío e `integrity_check` devolvió `ok`. Los seeds se importan y su CLI está disponible; la base contiene los cinco roles. La factory todavía no registra rutas ni APIs. El SHA-256 de la base de desarrollo quedó igual antes y después.
 
 ## 5. Tablas y servicios existentes
 
@@ -164,9 +163,9 @@ SQLite se usa para desarrollo. Serializa escrituras y no aporta por sí sola alt
 Desde la raíz del repositorio y con el intérprete que tiene Flask instalado:
 
 ```powershell
-python -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Las pruebas usan bases temporales y no deben apuntar a `backend/instance/fitpath-development.sqlite3` ni a `gimnasio.db`. La suite acumulada fue confirmada anteriormente como satisfactoria desde VS Code; en el entorno de esta entrega, la ejecución no pudo importar los tests por falta de Flask. Repetila en el intérprete configurado antes de considerar validado Flask–SQLite.
+Las pruebas usan bases temporales y no deben apuntar a `backend/instance/fitpath-development.sqlite3` ni a `gimnasio.db`. El 2026-11-13, `.\.venv\Scripts\python.exe -m unittest discover -s tests -v` ejecutó 96 pruebas en 69.969 segundos: `OK`. La base de desarrollo conservó el mismo SHA-256 antes y después de las verificaciones.
 
 Referencias oficiales: [CLI y detección de fábricas Flask](https://flask.palletsprojects.com/en/stable/cli/), [contexto de aplicación y teardown](https://flask.palletsprojects.com/en/stable/appcontext/) y [servidor de desarrollo](https://flask.palletsprojects.com/en/stable/server/).
