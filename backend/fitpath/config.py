@@ -30,6 +30,14 @@ class BaseConfig:
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = True
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
+    S3_BUCKET = os.environ.get("AWS_S3_BUCKET")
+    S3_REGION = os.environ.get("AWS_REGION")
+    S3_PREFIX = os.environ.get("FITPATH_S3_PREFIX", "fitpath")
+    S3_ALLOWED_CONTENT_TYPES = os.environ.get("FITPATH_S3_ALLOWED_CONTENT_TYPES")
+    S3_MAX_UPLOAD_BYTES = os.environ.get("FITPATH_S3_MAX_UPLOAD_BYTES")
+    S3_DOWNLOAD_TTL_SECONDS = os.environ.get(
+        "FITPATH_S3_DOWNLOAD_TTL_SECONDS", "300"
+    )
 
 
 class DevelopmentConfig(BaseConfig):
