@@ -37,7 +37,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
 
         self.assertEqual(
             apply_migrations(self.connection, MIGRATIONS_DIR),
-            (1, 2, 3, 4, 5, 6, 7, 8, 9),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
         )
         seed_initial_roles(self.connection)
 
@@ -219,6 +219,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
                 (7, "0007_mantenimiento_perfiles.sql"),
                 (8, "0008_remuneraciones.sql"),
                 (9, "0009_google_identities.sql"),
+                (10, "0010_cliente_imagen_perfil.sql"),
             ),
         )
         self.assertEqual(
@@ -605,7 +606,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
             self.connection.execute(
                 "SELECT count(*) FROM schema_migrations"
             ).fetchone()[0],
-            9,
+            10,
         )
         self.assertFalse(self.connection.in_transaction)
         self.assertEqual(

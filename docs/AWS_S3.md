@@ -1,37 +1,67 @@
-# AWS S3 — servicio privado
+# AWS S3 — imágenes privadas de perfil
 
-## Estado
+## Estado verificado
 
-El backend dispone de un servicio Flask reutilizable en `backend/fitpath/services/s3_storage.py`. No hay endpoints HTTP porque todavía no están definidos los casos de uso, entidades propietarias ni roles autorizados para cada tipo de archivo.
+El Cliente autenticado puede subir y consultar su propia imagen de perfil mediante:
 
-El servicio:
+- `POST /api/v1/client/profile-image`, con `multipart/form-data`, campo `image` y encabezado `X-CSRF-Token`;
+- `GET /api/v1/client/profile-image`, que devuelve una URL prefirmada de corta duración.
 
-- exige bucket, región, tamaño máximo y allowlist MIME explícitos;
-- mide el contenido real y rechaza archivos vacíos, sobredimensionados o con longitud inconsistente;
-- genera claves opacas bajo un prefijo controlado y no conserva el nombre original;
-- solicita cifrado S3 `AES256` y nunca establece una ACL pública;
-- recupera archivos mediante URLs prefirmadas con duración máxima de 15 minutos;
-- traduce errores de AWS a errores internos sin exponer detalles ni credenciales.
+La clave del objeto se persiste en `clientes.imagen_perfil_clave_s3`. Los objetos usan claves opacas bajo `fitpath/clientes/{id}/perfil`, cifrado S3 `AES256` y ninguna ACL pública. La API exige sesión Cliente, permiso `cliente.datos.ver`, propiedad del perfil y CSRF para la escritura.
 
-## Variables de entorno
+Se admiten únicamente JPEG, PNG y WebP de hasta 5 MiB. El backend compara el MIME declarado con la firma real del archivo antes de reutilizar `S3StorageService`.
+
+Las pruebas automatizadas son locales y no acceden a AWS. La conectividad real sigue pendiente hasta configurar un bucket existente y credenciales válidas.
+
+## Configuración
+
+Variables requeridas:
 
 ```text
-AWS_S3_BUCKET=<bucket privado>
-AWS_REGION=<región AWS>
+AWS_S3_BUCKET=<bucket privado existente>
+AWS_REGION=<región del bucket>
+```
+
+Variables opcionales:
+
+```text
+AWS_PROFILE=<perfil local, si se usa>
 FITPATH_S3_PREFIX=fitpath
-FITPATH_S3_ALLOWED_CONTENT_TYPES=<lista MIME separada por comas>
-FITPATH_S3_MAX_UPLOAD_BYTES=<entero positivo>
+FITPATH_S3_ALLOWED_CONTENT_TYPES=image/jpeg,image/png,image/webp
+FITPATH_S3_MAX_UPLOAD_BYTES=5242880
 FITPATH_S3_DOWNLOAD_TTL_SECONDS=300
 ```
 
-Boto3 obtiene las credenciales mediante su cadena estándar del entorno. No guardar `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, tokens ni archivos `.env` en Git. El bucket debe mantener bloqueado el acceso público; la aplicación no depende de objetos públicos.
+Boto3 obtiene credenciales mediante su cadena estándar. No guardar `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, tokens, perfiles locales ni `.env` en Git.
 
-## Pendientes antes de exponer endpoints
+## Recuperar los datos del bucket sin compartir secretos
 
-1. Aprobar los casos de uso: tipo de archivo, entidad propietaria y motivo de almacenamiento.
-2. Definir MIME y tamaño máximo por caso, no como una política genérica inventada.
-3. Definir autorización por rol, sede y propiedad del recurso antes de generar una carga o descarga.
-4. Decidir persistencia de la clave S3 y política de reemplazo, retención y eliminación.
-5. Ejecutar una prueba de integración contra un bucket privado de desarrollo con credenciales válidas y permisos mínimos.
+Desde la consola AWS, el nombre se ve en **S3 > Buckets** y la región en la columna **AWS Region** o en **Properties**. Si ya existe un perfil local de AWS CLI, estos comandos no imprimen claves:
 
-Las pruebas automatizadas actuales usan un cliente falso y no acceden a AWS.
+```powershell
+aws sts get-caller-identity --profile fitpath-dev
+aws s3api list-buckets --query "Buckets[].Name" --output table --profile fitpath-dev
+aws s3api get-bucket-location --bucket <NOMBRE_BUCKET> --profile fitpath-dev
+```
+
+Una ubicación `null` en el último comando corresponde a `us-east-1`.
+
+La clave secreta de acceso no puede recuperarse después de su creación. Para no compartirla por chat, usar preferentemente IAM Identity Center:
+
+```powershell
+aws configure sso --profile fitpath-dev
+aws sso login --profile fitpath-dev
+```
+
+Si la cuenta no usa SSO, crear o rotar una credencial de desarrollo con permisos mínimos y cargarla localmente con `aws configure --profile fitpath-dev`. Los permisos requeridos por este caso son `s3:PutObject`, `s3:GetObject` y `s3:DeleteObject` únicamente sobre `<ARN_BUCKET>/fitpath/clientes/*`. El bloqueo de acceso público del bucket debe permanecer activo.
+
+## Demostración pendiente de conectividad
+
+1. Configurar localmente `AWS_PROFILE`, `AWS_S3_BUCKET` y `AWS_REGION`.
+2. Ejecutar migraciones y Flask sin publicar las variables.
+3. Iniciar sesión como Cliente y cargar una imagen válida desde **Mi perfil**.
+4. Comprobar en S3 que el objeto no es público y que usa cifrado `AES256`.
+5. Reiniciar Flask, volver a iniciar sesión y confirmar que dashboard y perfil muestran la imagen mediante otra URL temporal.
+6. Probar una credencial sin permisos para verificar que la API responda un error controlado sin perder la referencia anterior.
+
+La integración no debe declararse completa hasta ejecutar esta demostración contra el bucket privado de desarrollo.

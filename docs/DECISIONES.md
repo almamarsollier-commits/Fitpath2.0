@@ -126,6 +126,14 @@ No bloquean el MVP visual:
 - Toda mutación requiere reglas de negocio completas, endpoint autorizado y confirmación explícita. Mientras falte cualquiera de esos controles, se informa como no disponible y no se simula éxito.
 - Un ejecutable autocontenido del backend es un entregable de empaquetado separado; copiar el repositorio a una PC sin Python no ejecuta Flask.
 
+### Imágenes de perfil privadas en AWS S3 (2026-11-16)
+
+- El primer caso de uso S3 aprobado es la imagen de perfil del Cliente autenticado.
+- Se admiten JPEG, PNG y WebP de hasta 5 MiB, validados por contenido real y MIME declarado.
+- SQLite conserva solamente la clave opaca del objeto; el bucket permanece privado y el navegador recibe URLs prefirmadas con vigencia máxima de 15 minutos.
+- Las claves se aíslan por `clientes/{id}/perfil`; la API comprueba sesión, rol, permiso, propiedad y CSRF antes de modificar la referencia.
+- Bucket, región y credenciales se configuran fuera del repositorio. La validación contra AWS queda pendiente mientras no exista configuración local.
+
 ### Decisiones pendientes antes de implementar sus módulos
 
 - Relación entre beneficios de membresía y las clases o actividades que habilitan.

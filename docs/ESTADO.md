@@ -120,12 +120,14 @@ Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membr
 - Los dashboards y endpoints de Entrenador, Jefe de sede, Administrador y Técnico todavía no existen en el backend actual. No se inventaron permisos para funciones ausentes ni se presentó el panel genérico con datos ficticios como una implementación real.
 - `origin/APIs` corresponde al prototipo Express, versiona dependencias y la base heredada, y no contiene autorización Flask reutilizable; no se hizo merge ni se copiaron sus artefactos.
 
-## Bloque 4 — Servicio AWS S3 preparado (2026-11-15)
+## Bloque 4 — Imagen de perfil privada en AWS S3 (2026-11-16)
 
-- No existía integración previa; `boto3` ya estaba declarado e instalado en el entorno.
-- Se agregó un servicio Flask lazy y configurable para carga privada y recuperación mediante URL temporal. Valida allowlist MIME, tamaño real, prefijo, cifrado y duración; no crea ACL pública ni expone credenciales.
-- No se agregaron endpoints porque la documentación no define tipos de archivo, entidades propietarias, retención ni roles por caso. Esos requisitos quedan registrados en `docs/AWS_S3.md`.
-- Cinco pruebas locales con cliente falso aprobaron en 0.122 segundos. No se realizó una prueba contra AWS ni se validaron credenciales reales.
+- Se aprobó y desarrolló el primer caso S3: el Cliente autenticado puede subir y consultar su propia imagen de perfil desde la API y la interfaz.
+- La migración 0010 conserva la clave S3 en `clientes`; la API valida sesión, rol, permiso, propiedad, CSRF, tamaño máximo de 5 MiB y MIME real JPEG/PNG/WebP.
+- El servicio existente continúa usando claves opacas, cifrado `AES256`, bucket privado y URLs prefirmadas breves. Al reemplazar una imagen intenta retirar el objeto anterior sin perder la nueva referencia si S3 falla durante esa limpieza.
+- Se agregaron pruebas locales de permisos, MIME, errores AWS, aislamiento de propietario y persistencia tras recrear Flask. Se reutilizó el entorno virtual existente de `C:/Proyectos/Fitpath2.0` y se instaló allí `boto3`, ya declarado en `requirements.txt`; la verificación focalizada final de 13 pruebas y la regresión Python completa de 137 pruebas finalizaron en `OK`.
+- Node no está disponible en el entorno actual, por lo que no se repitió la suite JavaScript del Asistente de IA; sus tres pruebas API Python sí pasaron dentro de la regresión.
+- Tampoco existen bucket, región, perfil AWS, credenciales ni AWS CLI configurados. La comunicación real con AWS continúa pendiente y está documentada en `docs/AWS_S3.md` sin solicitar ni exponer secretos.
 
 ## FitPath Smart Assistant — Portable e integrado (2026-11-15)
 

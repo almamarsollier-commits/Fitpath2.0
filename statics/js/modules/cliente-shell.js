@@ -175,6 +175,88 @@ function hydrateDemoContent() {
   });
 }
 
+function showProfileImage(url, fullName) {
+  if (!url) return;
+  document.querySelectorAll(".fp-avatar, .fp-client-avatar, .cl-profile-avatar").forEach((avatar) => {
+    const image = document.createElement("img");
+    image.src = url;
+    image.alt = avatar.classList.contains("cl-profile-avatar") ? `Foto de perfil de ${fullName}` : "";
+    image.referrerPolicy = "no-referrer";
+    avatar.replaceChildren(image);
+    avatar.classList.add("has-profile-image");
+  });
+}
+
+async function initializeProfileImage(identity, fullName) {
+  const form = document.querySelector("[data-profile-image-form]");
+  const input = form?.elements.namedItem("image");
+  const button = form?.querySelector("button[type='submit']");
+  const status = document.querySelector("[data-profile-image-status]");
+
+  const setStatus = (message, isError = false) => {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.error = isError ? "true" : "false";
+  };
+
+  try {
+    const response = await fetch("/api/v1/client/profile-image", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (response.ok) {
+      const payload = await response.json();
+      if (payload.image?.url) showProfileImage(payload.image.url, fullName);
+    } else if (response.status === 503) {
+      setStatus("La carga de fotos requiere configurar el bucket privado de desarrollo.", true);
+    }
+  } catch (_error) {
+    setStatus("No pudimos consultar tu foto de perfil.", true);
+  }
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const file = input?.files?.[0];
+    if (!file) {
+      setStatus("Elegí una imagen JPEG, PNG o WebP.", true);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setStatus("La imagen debe pesar como máximo 5 MiB.", true);
+      return;
+    }
+
+    if (button) button.disabled = true;
+    setStatus("Subiendo tu foto…");
+    const body = new FormData();
+    body.append("image", file);
+    try {
+      const response = await fetch("/api/v1/client/profile-image", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "X-CSRF-Token": identity.csrf_token
+        },
+        body
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || payload.error || "upload_failed");
+      if (payload.image?.url) showProfileImage(payload.image.url, fullName);
+      form.reset();
+      setStatus("Tu foto se guardó de forma privada.");
+    } catch (error) {
+      const message = error.message === "storage_not_configured"
+        ? "El almacenamiento S3 todavía no está configurado."
+        : "No pudimos guardar la imagen. Revisá el formato e intentá nuevamente.";
+      setStatus(message, true);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
+}
+
 const view = viewMap[document.body.dataset.clientView] ?? viewMap["inicio-resumen"];
 renderSidebar(view.section);
 renderBreadcrumbs(view);
@@ -214,14 +296,19 @@ async function initializeFitPathSession() {
     const fullName = `${identity.user.nombre} ${identity.user.apellido}`.trim();
     const profileName = document.querySelector('.fp-user-chip [data-demo-text="profile.name"]');
     const profileAvatar = document.querySelector(".fp-user-chip .fp-avatar");
+    const sidebarAvatar = document.querySelector(".fp-client-avatar");
     const identityLabel = document.querySelector("[data-fitpath-identity]");
     if (profileName) profileName.textContent = fullName;
     if (profileAvatar) {
       profileAvatar.textContent = `${identity.user.nombre[0] ?? ""}${identity.user.apellido[0] ?? ""}`.toUpperCase();
     }
+    if (sidebarAvatar) {
+      sidebarAvatar.textContent = `${identity.user.nombre[0] ?? ""}${identity.user.apellido[0] ?? ""}`.toUpperCase();
+    }
     if (identityLabel) identityLabel.textContent = `${identity.user.rol} · ID FitPath ${identity.user.id}`;
     if (csrfInput) csrfInput.value = identity.csrf_token;
     if (logoutButton) logoutButton.disabled = false;
+    await initializeProfileImage(identity, fullName);
 
     logoutForm?.addEventListener("submit", async (event) => {
       event.preventDefault();

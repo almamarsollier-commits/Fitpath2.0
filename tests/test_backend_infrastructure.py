@@ -66,6 +66,7 @@ class BackendInfrastructureTests(unittest.TestCase):
                 "/api/v1/assistant/routine",
                 "/api/v1/assistant/progress",
                 "/api/v1/assistant/membership",
+                "/api/v1/client/profile-image",
             },
         )
         self.assertFalse(development_database.exists())

@@ -33,8 +33,12 @@ class BaseConfig:
     S3_BUCKET = os.environ.get("AWS_S3_BUCKET")
     S3_REGION = os.environ.get("AWS_REGION")
     S3_PREFIX = os.environ.get("FITPATH_S3_PREFIX", "fitpath")
-    S3_ALLOWED_CONTENT_TYPES = os.environ.get("FITPATH_S3_ALLOWED_CONTENT_TYPES")
-    S3_MAX_UPLOAD_BYTES = os.environ.get("FITPATH_S3_MAX_UPLOAD_BYTES")
+    S3_ALLOWED_CONTENT_TYPES = os.environ.get(
+        "FITPATH_S3_ALLOWED_CONTENT_TYPES", "image/jpeg,image/png,image/webp"
+    )
+    S3_MAX_UPLOAD_BYTES = os.environ.get(
+        "FITPATH_S3_MAX_UPLOAD_BYTES", str(5 * 1024 * 1024)
+    )
     S3_DOWNLOAD_TTL_SECONDS = os.environ.get(
         "FITPATH_S3_DOWNLOAD_TTL_SECONDS", "300"
     )

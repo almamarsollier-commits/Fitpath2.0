@@ -175,6 +175,14 @@ class S3StorageService:
         except (BotoCoreError, ClientError) as error:
             raise StorageOperationError("No se pudo preparar la descarga.") from error
 
+    def delete_private(self, object_key):
+        """Elimina una clave privada validada; nunca acepta rutas ajenas al prefijo."""
+        key = self._validated_key(object_key)
+        try:
+            self.client.delete_object(Bucket=self.settings.bucket, Key=key)
+        except (BotoCoreError, ClientError) as error:
+            raise StorageOperationError("No se pudo eliminar el archivo.") from error
+
 
 def create_s3_storage(config, client=None):
     settings = S3StorageSettings.from_mapping(config)

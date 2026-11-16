@@ -544,6 +544,9 @@ h1, h2, h3 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacing: -.04
 .fp-showcase .fp-data-caption > span { width: 0.42rem; height: 0.42rem; background: var(--fp-green-deep); border-radius: 50%; }
 .fp-showcase .fp-user-chip { gap: 0.55rem; color: #354047; font-size: 0.76rem; font-weight: 650; white-space: nowrap; }
 .fp-showcase .fp-avatar { display: grid; width: 2rem; height: 2rem; place-items: center; color: #17200d; background: var(--fp-lime); border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #d4dfbd; font-size: 0.62rem; font-weight: 800; }
+.fp-showcase .fp-avatar img,
+.fp-showcase .fp-client-avatar img,
+.fp-showcase .cl-profile-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .fp-showcase .fp-page-container { width: min(100%, 1500px); padding: 1.8rem clamp(1.15rem, 3.4vw, 3.25rem) 1.4rem; margin: 0 auto; }
 .fp-showcase .fp-eyebrow,
 .fp-showcase .fp-section-kicker {
@@ -1538,6 +1541,11 @@ h1, h2, h3 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacing: -.04
 .fp-showcase .cl-action-card > p { margin: 0 0 0.65rem; color: #526047; font-size: 0.73rem; line-height: 1.6; }
 .fp-showcase .cl-action-card .fp-button { width: 100%; }
 .fp-showcase .cl-action-card .fp-button:disabled { color: #59656b; background: #e6eaeb; border-color: #d3dadc; opacity: 1; }
+.fp-showcase .cl-profile-image-form { display: grid; width: 100%; gap: 0.55rem; }
+.fp-showcase .cl-profile-image-form label { color: #dce4e7; font-size: 0.72rem; font-weight: 750; }
+.fp-showcase .cl-profile-image-form input { width: 100%; padding: 0.55rem; color: #e7edef; background: #151a1c; border: 1px solid #3b4549; border-radius: 0.55rem; font: inherit; }
+.fp-showcase .cl-profile-image-form input::file-selector-button { margin-right: 0.55rem; padding: 0.45rem 0.65rem; color: #18200f; background: var(--fp-lime); border: 0; border-radius: 0.4rem; font-weight: 800; cursor: pointer; }
+.fp-showcase [data-profile-image-status][data-error="true"] { color: #ffb5ad; }
 .fp-showcase .cl-class-grid { display: grid; gap: 0.8rem; }
 .fp-showcase .cl-class-tile { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 0.6rem; padding: 1.1rem; background: #fff; border: 1px solid #dfe5e7; border-radius: var(--fp-radius-md); box-shadow: 0 0.55rem 1.45rem rgb(13 15 16 / 4%); }
 .fp-showcase .cl-class-tile-dark { color: #f7f9fa; background: #1b2124; border-color: #30393d; }

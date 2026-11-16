@@ -28,6 +28,7 @@ class FakeS3Client:
     def __init__(self):
         self.uploads = []
         self.downloads = []
+        self.deletions = []
 
     def upload_fileobj(self, file_object, bucket, key, ExtraArgs):
         self.uploads.append((file_object.read(), bucket, key, ExtraArgs))
@@ -35,6 +36,9 @@ class FakeS3Client:
     def generate_presigned_url(self, operation, Params, ExpiresIn):
         self.downloads.append((operation, Params, ExpiresIn))
         return "https://example.invalid/temporary-download"
+
+    def delete_object(self, Bucket, Key):
+        self.deletions.append((Bucket, Key))
 
 
 class S3StorageTests(unittest.TestCase):
@@ -109,6 +113,17 @@ class S3StorageTests(unittest.TestCase):
         )
         with self.assertRaises(StorageValidationError):
             service.create_download_url("other/private-object")
+
+    def test_delete_is_private_and_restricted_to_prefix(self):
+        client = FakeS3Client()
+        service = create_s3_storage(VALID_CONFIG, client=client)
+        service.delete_private("fitpath/clientes/1/old-profile")
+        self.assertEqual(
+            client.deletions,
+            [("fitpath-private-tests", "fitpath/clientes/1/old-profile")],
+        )
+        with self.assertRaises(StorageValidationError):
+            service.delete_private("other/foreign-object")
 
     def test_flask_service_is_lazy_and_scoped_to_the_app_context(self):
         app = create_app("testing", dict(VALID_CONFIG, SECRET_KEY="test-only"))

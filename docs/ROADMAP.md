@@ -84,6 +84,8 @@ Todas las filas tienen prioridad **MVP aprobada**; no se establece un orden inte
 
 **Dependencias:** alcance de archivos, permisos, backend y autenticación.
 
+**Avance 2026-11-16:** implementada la imagen privada de perfil del Cliente, con persistencia de clave, autorización, validación y acceso temporal. Pendiente la prueba de conectividad contra el bucket AWS existente.
+
 ## Bloque 5 — Integraciones externas, incluido Google Calendar
 
 **Objetivo:** integrar los servicios externos aprobados para sus casos de uso.

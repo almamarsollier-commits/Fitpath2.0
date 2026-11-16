@@ -22,7 +22,7 @@ from backend.fitpath.services.payments import (
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS_DIR = REPOSITORY_ROOT / "backend" / "fitpath" / "migrations"
-MIGRATION_VERSIONS = (1, 2, 3, 4, 5, 6, 7, 8, 9)
+MIGRATION_VERSIONS = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 DEFAULT_SUBSCRIPTION = object()
 
 
@@ -463,7 +463,7 @@ class MembershipPaymentSchemaTests(unittest.TestCase):
             self.connection.execute(
                 "SELECT count(*) FROM schema_migrations"
             ).fetchone()[0],
-            9,
+            10,
         )
         copied_migrations = self.root / "checksum-migrations"
         copied_migrations.mkdir()

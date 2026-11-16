@@ -48,7 +48,7 @@ class GoogleAuthTests(unittest.TestCase):
         self.addCleanup(self.db.close)
         self.assertEqual(
             apply_migrations(self.db, self.app.config["MIGRATIONS_DIR"]),
-            (1, 2, 3, 4, 5, 6, 7, 8, 9),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
         )
         self.db.execute("INSERT INTO roles (nombre) VALUES ('Cliente')")
         self.db.execute(
