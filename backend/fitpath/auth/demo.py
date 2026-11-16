@@ -15,16 +15,28 @@ DEMO_USER = {
 }
 
 
-def create_demo_client(connection):
-    """Crea usuario activo y perfil Cliente, sin rol extra ni identidad Google."""
+def create_local_client(connection, *, nombre, apellido, nombre_usuario, email):
+    """Crea de forma idempotente un usuario Cliente local y su perfil."""
+    user_data = {
+        "nombre": nombre,
+        "apellido": apellido,
+        "nombre_usuario": nombre_usuario,
+        "email": email,
+    }
+    for key, value in user_data.items():
+        if not isinstance(value, str) or not value.strip() or value != value.strip():
+            raise ValueError("Los datos del usuario deben ser textos no vacíos y sin espacios externos.")
+        if key in {"nombre_usuario", "email"} and value != value.lower():
+            raise ValueError("El nombre de usuario y el email deben estar en minúsculas.")
+
     try:
         connection.execute("BEGIN IMMEDIATE")
         role = connection.execute(
-            "SELECT id_rol FROM roles WHERE id_rol = 1 AND nombre = ? COLLATE NOCASE",
+            "SELECT id_rol FROM roles WHERE nombre = ? COLLATE NOCASE",
             ("Cliente",),
         ).fetchone()
         if role is None:
-            raise ValueError("El rol Cliente esperado no está disponible.")
+            raise ValueError("El rol Cliente no está disponible.")
 
         matches = connection.execute(
             """
@@ -32,18 +44,18 @@ def create_demo_client(connection):
             FROM usuarios
             WHERE nombre_usuario = ? COLLATE NOCASE OR email = ? COLLATE NOCASE
             """,
-            (DEMO_USER["nombre_usuario"], DEMO_USER["email"]),
+            (user_data["nombre_usuario"], user_data["email"]),
         ).fetchall()
         if matches:
             if len(matches) != 1:
-                raise ValueError("La identidad demo coincide con varias cuentas.")
+                raise ValueError("El nombre de usuario y el email coinciden con cuentas distintas.")
             user = matches[0]
             expected = (
-                DEMO_USER["nombre"],
-                DEMO_USER["apellido"],
-                DEMO_USER["nombre_usuario"],
-                DEMO_USER["email"],
-                1,
+                user_data["nombre"],
+                user_data["apellido"],
+                user_data["nombre_usuario"],
+                user_data["email"],
+                role["id_rol"],
                 1,
             )
             actual = tuple(
@@ -58,7 +70,7 @@ def create_demo_client(connection):
                 )
             )
             if actual != expected:
-                raise ValueError("La cuenta existente no coincide con la cuenta demo.")
+                raise ValueError("La cuenta existente no coincide con los datos autorizados.")
             user_id = user["id_usuario"]
             created = False
         else:
@@ -69,10 +81,10 @@ def create_demo_client(connection):
                 VALUES (?, ?, ?, ?, ?, 1)
                 """,
                 (
-                    DEMO_USER["nombre"],
-                    DEMO_USER["apellido"],
-                    DEMO_USER["nombre_usuario"],
-                    DEMO_USER["email"],
+                    user_data["nombre"],
+                    user_data["apellido"],
+                    user_data["nombre_usuario"],
+                    user_data["email"],
                     role["id_rol"],
                 ),
             )
@@ -90,6 +102,11 @@ def create_demo_client(connection):
     except Exception:
         connection.rollback()
         raise
+
+
+def create_demo_client(connection):
+    """Crea usuario activo y perfil Cliente, sin rol extra ni identidad Google."""
+    return create_local_client(connection, **DEMO_USER)
 
 
 def main():

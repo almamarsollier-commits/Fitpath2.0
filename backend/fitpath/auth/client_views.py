@@ -2,9 +2,10 @@
 
 from pathlib import Path
 
-from flask import Blueprint, abort, redirect, send_from_directory, url_for
+from flask import Blueprint, abort, send_from_directory
 
-from .routes import _current_fitpath_identity
+from ..permissions import CLIENT_VIEWS_PERMISSION
+from .authorization import require_access
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -35,23 +36,19 @@ def _send_client_view(filename):
     if filename not in CLIENT_VIEW_PATHS:
         abort(404)
 
-    identity = _current_fitpath_identity()
-    if identity is None:
-        return redirect(url_for("auth.login_page"))
-    if identity["user"]["rol"] != "Cliente":
-        abort(403)
-
     response = send_from_directory(CLIENT_TEMPLATES, filename)
     response.headers["Cache-Control"] = "private, no-store"
     return response
 
 
 @client_views_blueprint.get("/auth/cliente")
+@require_access(roles=("Cliente",), permission=CLIENT_VIEWS_PERMISSION)
 def client_home():
     return _send_client_view("inicio/resumen.html")
 
 
 @client_views_blueprint.get("/templates/cliente/<path:filename>")
+@require_access(roles=("Cliente",), permission=CLIENT_VIEWS_PERMISSION)
 def client_view(filename):
     return _send_client_view(filename)
 

@@ -4,7 +4,7 @@ import os
 
 from flask import Flask
 
-from .config import get_config
+from .config import get_config, get_secret_key
 from .database import close_db
 
 
@@ -12,6 +12,7 @@ def create_app(config_name=None, test_config=None):
     """Crea la app sin abrir SQLite; registra autenticación y vistas Cliente."""
     app = Flask(__name__, static_folder=None)
     app.config.from_object(get_config(config_name))
+    app.config["SECRET_KEY"] = get_secret_key()
 
     if test_config:
         app.config.update(test_config)

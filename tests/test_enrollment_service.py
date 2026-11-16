@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Barrier
 
+from _file_assertions import assert_optional_file_unchanged, snapshot_optional_file
 from backend.fitpath.database import connect_database
 from backend.fitpath.migrations import apply_migrations
 from backend.fitpath.seeds import seed_initial_roles
@@ -91,8 +92,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
         self.connection.commit()
 
         self.legacy_database = REPOSITORY_ROOT / "gimnasio.db"
-        legacy_stat = self.legacy_database.stat()
-        self.legacy_metadata = (legacy_stat.st_size, legacy_stat.st_mtime_ns)
+        self.legacy_metadata = snapshot_optional_file(self.legacy_database)
 
     def role_id(self, name):
         row = self.connection.execute(
@@ -635,10 +635,8 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
 
     def test_legacy_database_metadata_is_unchanged(self):
         create_enrollment(self.connection, self.client_id, self.class_id)
-        current_stat = self.legacy_database.stat()
-        self.assertEqual(
-            (current_stat.st_size, current_stat.st_mtime_ns),
-            self.legacy_metadata,
+        assert_optional_file_unchanged(
+            self, self.legacy_database, self.legacy_metadata
         )
 
 

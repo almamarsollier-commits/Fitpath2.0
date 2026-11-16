@@ -10,12 +10,17 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS_PATH = Path(__file__).resolve().parent / "migrations"
 
 
+def get_secret_key():
+    """Carga la clave Flask prefijada y conserva compatibilidad con SECRET_KEY."""
+    return os.environ.get("FLASK_SECRET_KEY") or os.environ.get("SECRET_KEY")
+
+
 class BaseConfig:
     DATABASE = None
     MIGRATIONS_DIR = MIGRATIONS_PATH
     SQLITE_TIMEOUT = 5.0
     TESTING = False
-    SECRET_KEY = os.environ.get("SECRET_KEY")
+    SECRET_KEY = None
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
     GOOGLE_REDIRECT_URI = os.environ.get(

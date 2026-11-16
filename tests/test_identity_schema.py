@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from _file_assertions import assert_optional_file_unchanged, snapshot_optional_file
 from backend.fitpath import create_app
 from backend.fitpath.database import (
     DatabaseConfigurationError,
@@ -13,7 +14,12 @@ from backend.fitpath.database import (
     get_db,
 )
 from backend.fitpath.migrations import MigrationError, apply_migrations
-from backend.fitpath.seeds import INITIAL_ROLES, seed_initial_roles
+from backend.fitpath.permissions import CLIENT_DATA_PERMISSION, CLIENT_VIEWS_PERMISSION
+from backend.fitpath.seeds import (
+    INITIAL_ROLES,
+    seed_initial_permissions,
+    seed_initial_roles,
+)
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -110,6 +116,30 @@ class IdentitySchemaTests(unittest.TestCase):
         self.assertEqual(
             self.connection.execute("SELECT count(*) FROM rol_permiso").fetchone()[0],
             0,
+        )
+
+    def test_permission_seed_assigns_client_view_and_data_permissions(self):
+        seed_initial_roles(self.connection)
+        self.assertEqual(
+            seed_initial_permissions(self.connection),
+            (CLIENT_VIEWS_PERMISSION, CLIENT_DATA_PERMISSION),
+        )
+        self.assertEqual(seed_initial_permissions(self.connection), ())
+        assignment = self.connection.execute(
+            """
+            SELECT p.clave, r.nombre
+            FROM rol_permiso AS rp
+            JOIN permisos AS p ON p.id_permiso = rp.permiso_id
+            JOIN roles AS r ON r.id_rol = rp.rol_id
+            ORDER BY p.clave
+            """
+        ).fetchall()
+        self.assertEqual(
+            [tuple(row) for row in assignment],
+            [
+                (CLIENT_DATA_PERMISSION, "Cliente"),
+                (CLIENT_VIEWS_PERMISSION, "Cliente"),
+            ],
         )
 
     def test_user_references_existing_role_and_rejects_missing_role(self):
@@ -329,11 +359,10 @@ class IdentitySchemaTests(unittest.TestCase):
 
     def test_legacy_database_metadata_is_unchanged_and_never_opened(self):
         legacy_database = REPOSITORY_ROOT / "gimnasio.db"
-        before = legacy_database.stat()
+        before = snapshot_optional_file(legacy_database)
         with self.assertRaises(DatabaseConfigurationError):
             connect_database(legacy_database)
-        after = legacy_database.stat()
-        self.assertEqual((before.st_size, before.st_mtime_ns), (after.st_size, after.st_mtime_ns))
+        assert_optional_file_unchanged(self, legacy_database, before)
 
 
 if __name__ == "__main__":

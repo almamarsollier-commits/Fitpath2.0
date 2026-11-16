@@ -8,6 +8,7 @@ from flask import Blueprint, current_app, jsonify, redirect, render_template, re
 
 from ..database import get_db
 from . import GOOGLE_ISSUER, get_oauth
+from .authorization import current_identity
 from .identities import create_link_request, find_active_user
 
 
@@ -22,40 +23,31 @@ auth_blueprint = Blueprint(
 
 
 def _current_fitpath_identity():
-    """Resuelve el usuario y rol desde SQLite para la sesión Flask actual."""
-    user_id = session.get("fitpath_user_id")
-    csrf_token = session.get("csrf_token")
-    if not user_id or not csrf_token:
-        return None
-
-    user = get_db().execute(
-        """
-        SELECT u.id_usuario, u.nombre, u.apellido, u.rol_id, r.nombre AS rol
-        FROM usuarios AS u
-        JOIN roles AS r ON r.id_rol = u.rol_id
-        WHERE u.id_usuario = ? AND u.activo = 1
-        """,
-        (user_id,),
-    ).fetchone()
-    if user is None:
-        session.clear()
-        return None
-
-    return {
-        "authenticated": True,
-        "csrf_token": csrf_token,
-        "user": {
-            "id": user["id_usuario"],
-            "nombre": user["nombre"],
-            "apellido": user["apellido"],
-            "rol": user["rol"],
-        },
-    }
+    """Compatibilidad interna para las vistas y pruebas existentes."""
+    return current_identity()
 
 
 def _no_store(response):
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+def _log_google_callback_failure(stage, error=None):
+    """Registra sólo la etapa y el tipo; nunca datos de la respuesta OAuth."""
+    error_name = type(error).__name__ if error is not None else "ValidationError"
+    oauth_code = getattr(error, "error", None)
+    if not (
+        isinstance(oauth_code, str)
+        and len(oauth_code) <= 64
+        and oauth_code.replace("_", "").isalnum()
+    ):
+        oauth_code = "unavailable"
+    current_app.logger.warning(
+        "Google OAuth callback rechazado: stage=%s error=%s oauth_code=%s",
+        stage,
+        error_name,
+        oauth_code,
+    )
 
 
 def _configured():
@@ -105,23 +97,29 @@ def google_callback():
 
     expected_nonce = session.pop("google_oidc_nonce", None)
     if not expected_nonce:
+        _log_google_callback_failure("session_nonce")
         return render_template("auth/login.html", error="login_failed"), 400
 
+    stage = "token_exchange_or_oidc_validation"
     try:
         token = get_oauth().create_client("google").authorize_access_token()
+        stage = "userinfo"
         userinfo = token.get("userinfo")
         if not isinstance(userinfo, dict):
             raise OAuthError("invalid_userinfo")
         # Authlib valida firma, issuer, audiencia, expiración y el nonce enviado.
         # Se compara también el nonce de la sesión para exigir el flujo iniciado aquí.
+        stage = "nonce_claim"
         nonce = userinfo.get("nonce")
         if not isinstance(nonce, str) or not hmac.compare_digest(nonce, expected_nonce):
             raise OAuthError("invalid_nonce")
+        stage = "identity_claims"
         issuer = userinfo.get("iss")
         subject = userinfo.get("sub")
         if issuer != GOOGLE_ISSUER or not isinstance(subject, str) or not subject.strip():
             raise OAuthError("invalid_identity")
-    except Exception:
+    except Exception as error:
+        _log_google_callback_failure(stage, error)
         return render_template("auth/login.html", error="login_failed"), 400
 
     connection = get_db()

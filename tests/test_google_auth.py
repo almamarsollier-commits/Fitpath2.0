@@ -1,6 +1,7 @@
 """Pruebas de OIDC Google aisladas del proveedor externo."""
 
 import hashlib
+import os
 import re
 import tempfile
 import unittest
@@ -18,11 +19,12 @@ from joserfc.jwk import RSAKey
 from backend.fitpath import create_app
 from backend.fitpath.auth import GOOGLE_ISSUER
 from backend.fitpath.auth.client_views import CLIENT_VIEW_PATHS
-from backend.fitpath.auth.demo import create_demo_client
+from backend.fitpath.auth.demo import create_demo_client, create_local_client
 from backend.fitpath.auth.provision import approve_link
 from backend.fitpath.config import BaseConfig
 from backend.fitpath.database import connect_database
 from backend.fitpath.migrations import apply_migrations
+from backend.fitpath.seeds import seed_initial_permissions
 
 
 class GoogleAuthTests(unittest.TestCase):
@@ -57,6 +59,8 @@ class GoogleAuthTests(unittest.TestCase):
             """
         )
         self.db.execute("INSERT INTO roles (nombre) VALUES ('Administrador')")
+        self.db.commit()
+        seed_initial_permissions(self.db)
         self.db.execute(
             """
             INSERT INTO usuarios
@@ -286,6 +290,17 @@ class GoogleAuthTests(unittest.TestCase):
             403,
         )
 
+    def test_client_home_requires_persisted_permission(self):
+        self.callback(self.valid_token())
+        self.db.execute("DELETE FROM rol_permiso")
+        self.db.commit()
+
+        self.assertEqual(self.client.get("/auth/cliente").status_code, 403)
+        self.assertEqual(
+            self.client.get("/templates/cliente/inicio/resumen.html").status_code,
+            403,
+        )
+
     def test_provider_uses_google_oidc_discovery_and_env_credentials(self):
         from backend.fitpath.auth import GOOGLE_DISCOVERY_URL, get_oauth
 
@@ -294,6 +309,29 @@ class GoogleAuthTests(unittest.TestCase):
             self.assertEqual(provider.client_id, "client-id-for-tests")
             self.assertEqual(provider._server_metadata_url, GOOGLE_DISCOVERY_URL)
         self.assertTrue(BaseConfig.SESSION_COOKIE_SECURE)
+
+    def test_factory_prefers_flask_secret_key_and_supports_legacy_name(self):
+        common_config = {
+            "DATABASE": str(self.database_path.parent / "secret-config.sqlite3"),
+            "GOOGLE_CLIENT_ID": "client-id-for-tests",
+            "GOOGLE_CLIENT_SECRET": "client-secret-for-tests",
+        }
+        with patch.dict(
+            os.environ,
+            {
+                "FLASK_SECRET_KEY": "prefixed-test-key",
+                "SECRET_KEY": "legacy-test-key",
+            },
+        ):
+            prefixed_app = create_app("testing", common_config)
+        self.assertEqual(prefixed_app.config["SECRET_KEY"], "prefixed-test-key")
+
+        with patch.dict(
+            os.environ,
+            {"FLASK_SECRET_KEY": "", "SECRET_KEY": "legacy-test-key"},
+        ):
+            legacy_app = create_app("testing", common_config)
+        self.assertEqual(legacy_app.config["SECRET_KEY"], "legacy-test-key")
 
     def test_missing_google_configuration_fails_closed(self):
         app = create_app(
@@ -332,12 +370,28 @@ class GoogleAuthTests(unittest.TestCase):
             self.assertEqual(session["google_oidc_nonce"], kwargs["nonce"])
 
     def test_callback_rejects_authlib_state_mismatch(self):
-        response, fake_client = self.callback(
-            None, MismatchingStateError(error="mismatching_state")
-        )
+        with self.assertLogs(self.app.logger.name, level="WARNING") as logs:
+            response, fake_client = self.callback(
+                None, MismatchingStateError(error="mismatching_state")
+            )
         self.assertEqual(response.status_code, 400)
         fake_client.authorize_access_token.assert_called_once_with()
         self.assertEqual(self.client.get("/auth/me").status_code, 401)
+        self.assertIn("stage=token_exchange_or_oidc_validation", logs.output[0])
+        self.assertIn("error=MismatchingStateError", logs.output[0])
+        self.assertIn("oauth_code=mismatching_state", logs.output[0])
+
+    def test_callback_logs_missing_session_nonce_without_sensitive_data(self):
+        with self.assertLogs(self.app.logger.name, level="WARNING") as logs:
+            response = self.client.get(
+                "/auth/google/callback?code=private-code&state=private-state"
+            )
+        self.assertEqual(response.status_code, 400)
+        message = "\n".join(logs.output)
+        self.assertIn("stage=session_nonce", message)
+        self.assertIn("oauth_code=unavailable", message)
+        self.assertNotIn("private-code", message)
+        self.assertNotIn("private-state", message)
 
     def test_callback_rejects_nonce_mismatch(self):
         response, _ = self.callback(self.valid_token(nonce="wrong-nonce"))
@@ -568,6 +622,37 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertEqual(
             self.db.execute("SELECT count(*) FROM rol_permiso").fetchone()[0],
             before_permissions,
+        )
+
+    def test_local_client_provisioner_is_transactional_and_idempotent(self):
+        data = {
+            "nombre": "Cliente",
+            "apellido": "Prueba",
+            "nombre_usuario": "client1",
+            "email": "client1@fitpath.test",
+        }
+        user_id, created = create_local_client(self.db, **data)
+        repeated_id, created_again = create_local_client(self.db, **data)
+
+        self.assertTrue(created)
+        self.assertFalse(created_again)
+        self.assertEqual(repeated_id, user_id)
+        user = self.db.execute(
+            "SELECT nombre, apellido, nombre_usuario, email, rol_id, activo "
+            "FROM usuarios WHERE id_usuario = ?",
+            (user_id,),
+        ).fetchone()
+        self.assertEqual(tuple(user), (*data.values(), 1, 1))
+        self.assertIsNotNone(
+            self.db.execute(
+                "SELECT id_cliente FROM clientes WHERE usuario_id = ?", (user_id,)
+            ).fetchone()
+        )
+        self.assertIsNone(
+            self.db.execute(
+                "SELECT id_identidad FROM identidades_google WHERE usuario_id = ?",
+                (user_id,),
+            ).fetchone()
         )
 
     def test_migration_enforces_unique_identity_user_and_foreign_key(self):

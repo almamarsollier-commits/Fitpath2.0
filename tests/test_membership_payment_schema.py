@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Barrier
 
+from _file_assertions import assert_optional_file_unchanged, snapshot_optional_file
 from backend.fitpath.database import connect_database
 from backend.fitpath.migrations import MigrationError, apply_migrations
 from backend.fitpath.seeds import seed_initial_currencies, seed_initial_roles
@@ -54,8 +55,7 @@ class MembershipPaymentSchemaTests(unittest.TestCase):
         self.connection.commit()
 
         legacy_database = REPOSITORY_ROOT / "gimnasio.db"
-        legacy_stat = legacy_database.stat()
-        self.legacy_metadata = (legacy_stat.st_size, legacy_stat.st_mtime_ns)
+        self.legacy_metadata = snapshot_optional_file(legacy_database)
 
     def create_client(self, suffix):
         role_id = self.connection.execute(
@@ -538,11 +538,7 @@ class MembershipPaymentSchemaTests(unittest.TestCase):
 
     def test_legacy_database_metadata_remains_unchanged(self):
         legacy_database = REPOSITORY_ROOT / "gimnasio.db"
-        legacy_stat = legacy_database.stat()
-        self.assertEqual(
-            (legacy_stat.st_size, legacy_stat.st_mtime_ns),
-            self.legacy_metadata,
-        )
+        assert_optional_file_unchanged(self, legacy_database, self.legacy_metadata)
 
 
 if __name__ == "__main__":
