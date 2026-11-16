@@ -22,10 +22,12 @@ def init_auth(app):
     )
 
     from .client_views import client_views_blueprint
+    from .role_views import role_views_blueprint
     from .routes import auth_blueprint
 
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(client_views_blueprint)
+    app.register_blueprint(role_views_blueprint)
 
 
 def get_oauth():

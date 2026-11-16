@@ -14,7 +14,11 @@ from backend.fitpath.database import (
     get_db,
 )
 from backend.fitpath.migrations import MigrationError, apply_migrations
-from backend.fitpath.permissions import CLIENT_DATA_PERMISSION, CLIENT_VIEWS_PERMISSION
+from backend.fitpath.permissions import (
+    CLIENT_DATA_PERMISSION,
+    CLIENT_VIEWS_PERMISSION,
+    INITIAL_ROLE_PERMISSIONS,
+)
 from backend.fitpath.seeds import (
     INITIAL_ROLES,
     seed_initial_permissions,
@@ -34,7 +38,7 @@ class IdentitySchemaTests(unittest.TestCase):
         self.database_path = self.root / "identity.sqlite3"
         self.connection = connect_database(self.database_path)
         self.addCleanup(self.connection.close)
-        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), tuple(range(1, 13)))
 
     def insert_role(self, name="Cliente"):
         cursor = self.connection.execute(
@@ -118,11 +122,12 @@ class IdentitySchemaTests(unittest.TestCase):
             0,
         )
 
-    def test_permission_seed_assigns_client_view_and_data_permissions(self):
+    def test_permission_seed_assigns_each_managed_role_permissions(self):
         seed_initial_roles(self.connection)
+        expected_inserted = tuple(item[0] for item in INITIAL_ROLE_PERMISSIONS)
         self.assertEqual(
             seed_initial_permissions(self.connection),
-            (CLIENT_VIEWS_PERMISSION, CLIENT_DATA_PERMISSION),
+            expected_inserted,
         )
         self.assertEqual(seed_initial_permissions(self.connection), ())
         assignment = self.connection.execute(
@@ -136,10 +141,7 @@ class IdentitySchemaTests(unittest.TestCase):
         ).fetchall()
         self.assertEqual(
             [tuple(row) for row in assignment],
-            [
-                (CLIENT_DATA_PERMISSION, "Cliente"),
-                (CLIENT_VIEWS_PERMISSION, "Cliente"),
-            ],
+            sorted((key, role) for key, _description, role in INITIAL_ROLE_PERMISSIONS),
         )
 
     def test_user_references_existing_role_and_rejects_missing_role(self):
@@ -273,11 +275,12 @@ class IdentitySchemaTests(unittest.TestCase):
                 (9, "0009_google_identities.sql"),
                 (10, "0010_cliente_imagen_perfil.sql"),
                 (11, "0011_mercado_pago_intentos.sql"),
+                (12, "0012_perfiles_usuario.sql"),
             ),
         )
         self.assertEqual(
             self.connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0],
-            11,
+            12,
         )
 
     def test_altered_applied_migration_is_rejected_by_checksum(self):

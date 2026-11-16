@@ -55,6 +55,32 @@ function renderMembership(root, membership) {
   }
 }
 
+function renderMembershipCatalog(root, payload) {
+  const mount = root.querySelector("[data-membership-catalog]");
+  if (!mount) return;
+  if (!payload.memberships.length) {
+    mount.replaceChildren(element("p", "cl-payment-empty", "No hay membresías disponibles."));
+    return;
+  }
+  const cards = payload.memberships.map((membership) => {
+    const card = element("article", "fp-card cl-debt-card");
+    card.append(
+      element("span", "fp-section-kicker", membership.moneda),
+      element("h3", "", membership.nombre),
+      element("strong", "cl-debt-amount", formatMoney(membership.precio_unidades_menores, membership.moneda, membership.decimales)),
+      element("p", "", membership.descripcion || membership.beneficios || "Sin descripción adicional.")
+    );
+    const button = element("button", "fp-button fp-button-primary", payload.active?.membresia_id === membership.id ? "Plan activo" : "Elegir membresía");
+    button.type = "button";
+    button.dataset.selectMembership = String(membership.id);
+    button.disabled = Boolean(payload.active);
+    if (payload.active) button.title = "Ya tenés una membresía activa.";
+    card.append(button);
+    return card;
+  });
+  mount.replaceChildren(...cards);
+}
+
 function renderDebts(root, debts, checkoutAvailable) {
   const mount = root.querySelector("[data-payment-debts]");
   if (!mount) return;
@@ -154,6 +180,16 @@ export async function initializePayments({ csrfToken }) {
     }
   };
 
+  const loadCatalog = async () => {
+    const response = await fetch("/api/v1/client/memberships", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) throw new Error("membership_catalog_failed");
+    renderMembershipCatalog(root, await response.json());
+  };
+
   const params = new URLSearchParams(window.location.search);
   const returnedPaymentId = params.get("payment_id") || params.get("collection_id");
   if (returnedPaymentId) {
@@ -178,6 +214,26 @@ export async function initializePayments({ csrfToken }) {
   }
 
   root.addEventListener("click", async (event) => {
+    const membershipButton = event.target.closest("[data-select-membership]");
+    if (membershipButton) {
+      membershipButton.disabled = true;
+      setStatus("Creando la obligación de la membresía seleccionada…");
+      try {
+        const response = await fetch(`/api/v1/client/memberships/${membershipButton.dataset.selectMembership}/select`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { Accept: "application/json", "X-CSRF-Token": csrfToken }
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok && payload.error !== "membership_obligation_exists") throw payload;
+        await Promise.all([loadCatalog(), loadSummary()]);
+        setStatus(payload.error === "membership_obligation_exists" ? "La obligación ya existía y está lista para pagar." : "Membresía seleccionada. Revisá la obligación antes de pagar.");
+      } catch (error) {
+        membershipButton.disabled = false;
+        setStatus(error.error === "active_membership_exists" ? "Ya tenés una membresía activa." : "No pudimos seleccionar la membresía.", true);
+      }
+      return;
+    }
     const button = event.target.closest("[data-pay-debt]");
     if (!button) return;
     button.disabled = true;
@@ -208,7 +264,7 @@ export async function initializePayments({ csrfToken }) {
   });
 
   try {
-    await loadSummary();
+    await Promise.all([loadSummary(), loadCatalog()]);
   } catch (_error) {
     setStatus("No pudimos cargar tus pagos y deudas.", true);
   }

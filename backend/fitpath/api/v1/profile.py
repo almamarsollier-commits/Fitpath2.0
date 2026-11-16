@@ -1,13 +1,25 @@
-"""Imagen de perfil privada del Cliente autenticado."""
+"""Imagen de perfil privada del usuario autenticado."""
 
 import hmac
 import io
+from datetime import datetime, timezone
+from functools import wraps
 
 from flask import Blueprint, current_app, jsonify, request
 
-from ...auth.authorization import current_identity, require_api_access
+from ...auth.authorization import (
+    current_identity,
+    identity_has_permission,
+    require_api_access,
+)
 from ...database import get_db
-from ...permissions import CLIENT_DATA_PERMISSION
+from ...permissions import (
+    ADMIN_DATA_PERMISSION,
+    CLIENT_DATA_PERMISSION,
+    MANAGER_DATA_PERMISSION,
+    TECHNICIAN_DATA_PERMISSION,
+    TRAINER_DATA_PERMISSION,
+)
 from ...services.s3_storage import (
     StorageConfigurationError,
     StorageOperationError,
@@ -16,12 +28,31 @@ from ...services.s3_storage import (
 )
 
 
-profile_api_blueprint = Blueprint(
-    "profile_api", __name__, url_prefix="/api/v1/client/profile-image"
-)
+profile_api_blueprint = Blueprint("profile_api", __name__)
+PROFILE_PERMISSION_BY_ROLE = {
+    "Cliente": CLIENT_DATA_PERMISSION,
+    "Entrenador": TRAINER_DATA_PERMISSION,
+    "Jefe de sede": MANAGER_DATA_PERMISSION,
+    "Administrador": ADMIN_DATA_PERMISSION,
+    "Técnico de mantenimiento": TECHNICIAN_DATA_PERMISSION,
+}
 client_profile_required = require_api_access(
     roles=("Cliente",), permission=CLIENT_DATA_PERMISSION
 )
+
+
+def profile_access_required(view):
+    @wraps(view)
+    def protected_view(*args, **kwargs):
+        identity = current_identity()
+        if identity is None:
+            return jsonify({"error": "authentication_required"}), 401
+        permission = PROFILE_PERMISSION_BY_ROLE.get(identity["user"]["rol"])
+        if permission is None or not identity_has_permission(identity, permission):
+            return jsonify({"error": "permission_denied"}), 403
+        return view(*args, **kwargs)
+
+    return protected_view
 
 
 @profile_api_blueprint.after_request
@@ -30,13 +61,22 @@ def disable_private_cache(response):
     return response
 
 
-def _client_profile():
+def _utc_now():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _user_profile():
     identity = current_identity()
     return get_db().execute(
         """
-        SELECT id_cliente, imagen_perfil_clave_s3
-        FROM clientes
-        WHERE usuario_id = ?
+        SELECT u.id_usuario,
+               c.id_cliente,
+               p.imagen_perfil_clave_s3,
+               c.imagen_perfil_clave_s3 AS imagen_cliente_legacy
+        FROM usuarios u
+        LEFT JOIN clientes c ON c.usuario_id = u.id_usuario
+        LEFT JOIN perfiles_usuario p ON p.usuario_id = u.id_usuario
+        WHERE u.id_usuario = ?
         """,
         (identity["user"]["id"],),
     ).fetchone()
@@ -63,20 +103,38 @@ def _detect_image_content_type(content):
     raise StorageValidationError("El contenido no es una imagen JPEG, PNG o WebP válida.")
 
 
-def _owned_namespace(storage, client_id):
-    return f"clientes/{client_id}/perfil"
+def _owned_namespace(profile):
+    if profile["id_cliente"] is not None:
+        return f"clientes/{profile['id_cliente']}/perfil"
+    return f"usuarios/{profile['id_usuario']}/perfil"
 
 
-def _key_belongs_to_client(storage, client_id, object_key):
-    prefix = f"{storage.settings.prefix}/{_owned_namespace(storage, client_id)}/"
-    return isinstance(object_key, str) and object_key.startswith(prefix)
+def _allowed_prefixes(storage, profile):
+    prefixes = {
+        f"{storage.settings.prefix}/usuarios/{profile['id_usuario']}/perfil/"
+    }
+    if profile["id_cliente"] is not None:
+        prefixes.add(
+            f"{storage.settings.prefix}/clientes/{profile['id_cliente']}/perfil/"
+        )
+    return prefixes
 
 
-def _image_payload(storage, client_id, object_key):
+def _key_belongs_to_user(storage, profile, object_key):
+    return isinstance(object_key, str) and any(
+        object_key.startswith(prefix) for prefix in _allowed_prefixes(storage, profile)
+    )
+
+
+def _stored_key(profile):
+    return profile["imagen_perfil_clave_s3"] or profile["imagen_cliente_legacy"]
+
+
+def _image_payload(storage, profile, object_key):
     if not object_key:
         return {"image": None}
-    if not _key_belongs_to_client(storage, client_id, object_key):
-        current_app.logger.error("Referencia S3 de perfil fuera del espacio del Cliente.")
+    if not _key_belongs_to_user(storage, profile, object_key):
+        current_app.logger.error("Referencia S3 de perfil fuera del espacio del usuario.")
         return None
     return {
         "image": {
@@ -86,17 +144,15 @@ def _image_payload(storage, client_id, object_key):
     }
 
 
-@profile_api_blueprint.get("")
-@client_profile_required
+@profile_api_blueprint.get("/api/v1/me/profile-image")
+@profile_access_required
 def get_profile_image():
-    profile = _client_profile()
+    profile = _user_profile()
     if profile is None:
-        return jsonify({"error": "client_profile_required"}), 403
+        return jsonify({"error": "user_not_found"}), 404
     try:
         storage = get_s3_storage()
-        payload = _image_payload(
-            storage, profile["id_cliente"], profile["imagen_perfil_clave_s3"]
-        )
+        payload = _image_payload(storage, profile, _stored_key(profile))
         if payload is None:
             return jsonify({"error": "profile_image_reference_invalid"}), 500
         return jsonify(payload)
@@ -106,15 +162,21 @@ def get_profile_image():
         return jsonify({"error": "profile_image_unavailable"}), 503
 
 
-@profile_api_blueprint.post("")
+@profile_api_blueprint.get("/api/v1/client/profile-image")
 @client_profile_required
+def get_client_profile_image():
+    return get_profile_image()
+
+
+@profile_api_blueprint.post("/api/v1/me/profile-image")
+@profile_access_required
 def upload_profile_image():
     if not _csrf_is_valid():
         return jsonify({"error": "csrf_failed"}), 400
 
-    profile = _client_profile()
+    profile = _user_profile()
     if profile is None:
-        return jsonify({"error": "client_profile_required"}), 403
+        return jsonify({"error": "user_not_found"}), 404
     uploaded = request.files.get("image")
     if uploaded is None:
         return jsonify({"error": "image_required"}), 400
@@ -135,7 +197,7 @@ def upload_profile_image():
 
         object_key = storage.upload_private(
             io.BytesIO(content),
-            namespace=_owned_namespace(storage, profile["id_cliente"]),
+            namespace=_owned_namespace(profile),
             content_type=detected_type,
             content_length=len(content),
         )
@@ -147,13 +209,25 @@ def upload_profile_image():
         return jsonify({"error": "profile_image_upload_failed"}), 503
 
     connection = get_db()
-    previous_key = profile["imagen_perfil_clave_s3"]
+    previous_key = _stored_key(profile)
     try:
         connection.execute("BEGIN IMMEDIATE")
         connection.execute(
-            "UPDATE clientes SET imagen_perfil_clave_s3 = ? WHERE id_cliente = ?",
-            (object_key, profile["id_cliente"]),
+            """
+            INSERT INTO perfiles_usuario
+                (usuario_id, imagen_perfil_clave_s3, actualizado_utc)
+            VALUES (?, ?, ?)
+            ON CONFLICT(usuario_id) DO UPDATE SET
+                imagen_perfil_clave_s3 = excluded.imagen_perfil_clave_s3,
+                actualizado_utc = excluded.actualizado_utc
+            """,
+            (profile["id_usuario"], object_key, _utc_now()),
         )
+        if profile["id_cliente"] is not None:
+            connection.execute(
+                "UPDATE clientes SET imagen_perfil_clave_s3 = ? WHERE id_cliente = ?",
+                (object_key, profile["id_cliente"]),
+            )
         connection.commit()
     except Exception:
         connection.rollback()
@@ -167,17 +241,25 @@ def upload_profile_image():
     if (
         previous_key
         and previous_key != object_key
-        and _key_belongs_to_client(storage, profile["id_cliente"], previous_key)
+        and _key_belongs_to_user(storage, profile, previous_key)
     ):
         try:
             storage.delete_private(previous_key)
         except (StorageValidationError, StorageOperationError):
             current_app.logger.warning("No se pudo retirar la imagen de perfil anterior.")
     elif previous_key and previous_key != object_key:
-        current_app.logger.warning("No se retiró una imagen anterior fuera del espacio del Cliente.")
+        current_app.logger.warning(
+            "No se retiró una imagen anterior fuera del espacio del usuario."
+        )
 
     try:
-        payload = _image_payload(storage, profile["id_cliente"], object_key)
+        payload = _image_payload(storage, profile, object_key)
         return jsonify(payload), 201
     except StorageOperationError:
         return jsonify({"image": None, "uploaded": True}), 201
+
+
+@profile_api_blueprint.post("/api/v1/client/profile-image")
+@client_profile_required
+def upload_client_profile_image():
+    return upload_profile_image()

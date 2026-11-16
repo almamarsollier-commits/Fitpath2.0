@@ -56,7 +56,7 @@ class ProfileImageApiTests(unittest.TestCase):
         self.addCleanup(self.db.close)
         self.assertEqual(
             apply_migrations(self.db, self.app.config["MIGRATIONS_DIR"]),
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            tuple(range(1, 13)),
         )
         seed_initial_roles(self.db)
         seed_initial_permissions(self.db)
@@ -137,6 +137,41 @@ class ProfileImageApiTests(unittest.TestCase):
             (self.client_id,),
         ).fetchone()[0]
         self.assertEqual(stored, f"fitpath/clientes/{self.client_id}/perfil/new-profile-image")
+
+    def test_non_client_role_uses_own_user_namespace_through_shared_endpoint(self):
+        self._login(self.admin_user_id)
+        with patch(
+            "backend.fitpath.api.v1.profile.get_s3_storage", return_value=self.storage
+        ):
+            response = self.client.post(
+                "/api/v1/me/profile-image",
+                data={"image": (io.BytesIO(PNG_IMAGE), "admin.png", "image/png")},
+                headers={"X-CSRF-Token": "profile-csrf"},
+                content_type="multipart/form-data",
+            )
+            recovered = self.client.get("/api/v1/me/profile-image")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(recovered.status_code, 200)
+        self.assertEqual(
+            self.storage.uploads,
+            [
+                (
+                    PNG_IMAGE,
+                    f"usuarios/{self.admin_user_id}/perfil",
+                    "image/png",
+                    len(PNG_IMAGE),
+                )
+            ],
+        )
+        stored = self.db.execute(
+            "SELECT imagen_perfil_clave_s3 FROM perfiles_usuario WHERE usuario_id = ?",
+            (self.admin_user_id,),
+        ).fetchone()[0]
+        self.assertEqual(
+            stored,
+            f"fitpath/usuarios/{self.admin_user_id}/perfil/new-profile-image",
+        )
 
     def test_declared_mime_must_match_image_signature(self):
         self._login()

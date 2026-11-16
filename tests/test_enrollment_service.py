@@ -37,7 +37,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
 
         self.assertEqual(
             apply_migrations(self.connection, MIGRATIONS_DIR),
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            tuple(range(1, 13)),
         )
         seed_initial_roles(self.connection)
 
@@ -201,6 +201,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
                 "solicitudes_vinculo_google",
                 "intentos_pago",
                 "eventos_webhook_pago",
+                "perfiles_usuario",
             },
         )
         versions = tuple(
@@ -223,6 +224,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
                 (9, "0009_google_identities.sql"),
                 (10, "0010_cliente_imagen_perfil.sql"),
                 (11, "0011_mercado_pago_intentos.sql"),
+                (12, "0012_perfiles_usuario.sql"),
             ),
         )
         self.assertEqual(
@@ -609,7 +611,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
             self.connection.execute(
                 "SELECT count(*) FROM schema_migrations"
             ).fetchone()[0],
-            11,
+            12,
         )
         self.assertFalse(self.connection.in_transaction)
         self.assertEqual(

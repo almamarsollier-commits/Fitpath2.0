@@ -183,7 +183,7 @@
     fitness: Object.freeze(fitness.map(Object.freeze)),
     application: Object.freeze(application.map(Object.freeze)),
     safetyKeywords: Object.freeze(["dolor fuerte", "dolor agudo", "lesion", "diagnostico", "tratamiento", "medicacion", "trastorno alimentario", "desmayo", "dolor de pecho"]),
-    greetings: Object.freeze(["¡Hola! Soy FitPath Smart Assistant. Puedo orientarte sobre entrenamiento y nutrición general, o ayudarte a navegar FitPath.", "¡Hola! ¿Querés hablar de entrenamiento, alimentación o de alguna función de FitPath?"]),
+    greetings: Object.freeze(["¡Hola! Soy el Asistente de IA de FitPath. Puedo orientarte sobre entrenamiento y nutrición general, o ayudarte a navegar FitPath.", "¡Hola! ¿Querés hablar de entrenamiento, alimentación o de alguna función de FitPath?"]),
     fallbacks: Object.freeze([
       "No tengo suficiente contexto para responder eso con seguridad. Puedo ayudarte con entrenamiento, nutrición general o navegación por FitPath.",
       "Ese tema está fuera de mi base actual. Probá preguntarme por fuerza, cardio, recuperación, alimentación o funciones de FitPath."

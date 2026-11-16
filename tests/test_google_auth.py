@@ -24,7 +24,7 @@ from backend.fitpath.auth.provision import approve_link
 from backend.fitpath.config import BaseConfig
 from backend.fitpath.database import connect_database
 from backend.fitpath.migrations import apply_migrations
-from backend.fitpath.seeds import seed_initial_permissions
+from backend.fitpath.seeds import seed_initial_permissions, seed_initial_roles
 
 
 class GoogleAuthTests(unittest.TestCase):
@@ -48,9 +48,9 @@ class GoogleAuthTests(unittest.TestCase):
         self.addCleanup(self.db.close)
         self.assertEqual(
             apply_migrations(self.db, self.app.config["MIGRATIONS_DIR"]),
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            tuple(range(1, 13)),
         )
-        self.db.execute("INSERT INTO roles (nombre) VALUES ('Cliente')")
+        seed_initial_roles(self.db)
         self.db.execute(
             """
             INSERT INTO usuarios
@@ -58,7 +58,6 @@ class GoogleAuthTests(unittest.TestCase):
             VALUES ('Ana', 'Pérez', 'ana', 'ana@example.test', 1, 1)
             """
         )
-        self.db.execute("INSERT INTO roles (nombre) VALUES ('Administrador')")
         self.db.commit()
         seed_initial_permissions(self.db)
         self.db.execute(
@@ -217,22 +216,27 @@ class GoogleAuthTests(unittest.TestCase):
         dashboard = self.client.get(login.location)
         self.assertEqual(dashboard.status_code, 200)
         self.assertEqual(dashboard.mimetype, "text/html")
-        self.assertIn(b"experiencia de muestra", dashboard.data)
+        self.assertIn(b"datos propios", dashboard.data.lower())
         self.assertIn("private", dashboard.headers["Cache-Control"])
         self.assertIn("no-store", dashboard.headers["Cache-Control"])
         dashboard.close()
 
-        self.assertEqual(len(CLIENT_VIEW_PATHS), 13)
+        self.assertEqual(len(CLIENT_VIEW_PATHS), 7)
         linked_paths = set()
         for relative_path in CLIENT_VIEW_PATHS:
             page = self.client.get(f"/templates/cliente/{relative_path}")
             self.assertEqual(page.status_code, 200, relative_path)
             self.assertEqual(page.mimetype, "text/html", relative_path)
-            expected_marker = (
-                b"modo prueba"
-                if relative_path == "perfil/membresia.html"
-                else b"fictic"
-            )
+            markers = {
+                "perfil/membresia.html": b"modo prueba",
+                "perfil/index.html": b"perfil personal",
+                "inicio/resumen.html": b"datos propios",
+                "clases/index.html": b"datos persistidos",
+                "clases/reservas.html": b"historial real",
+                "rutina/semana.html": b"plan asignado",
+                "progreso/index.html": b"seguimiento privado",
+            }
+            expected_marker = markers[relative_path]
             self.assertIn(expected_marker, page.data.lower(), relative_path)
             for value in re.findall(r'(?:href|src)="([^"]+)"', page.get_data(as_text=True)):
                 path = urlsplit(value).path
@@ -248,7 +252,6 @@ class GoogleAuthTests(unittest.TestCase):
             resource.close()
 
         for path in (
-            "/statics/js/data/cliente-demo.js",
             "/statics/js/modules/navigation-drawer.js",
         ):
             resource = self.client.get(path)

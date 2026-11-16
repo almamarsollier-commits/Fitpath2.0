@@ -32,16 +32,28 @@
           <p class="form-message message-error" role="alert">
             {% if error == 'account_inactive' %}La cuenta FitPath está desactivada. Contactá a tu sede.
             {% elif error == 'auth_unavailable' or error == 'provider_unavailable' %}El acceso con Google no está configurado todavía.
+            {% elif error == 'demo_unavailable' %}Los datos locales de demostración todavía no están preparados.
             {% else %}No pudimos completar el acceso. Volvé a intentarlo o contactá a tu sede.{% endif %}
           </p>
         {% endif %}
         <a id="google-login-link" class="button button-primary button-full" href="{{ url_for('auth.google_login') }}"{% if auth_identity %} hidden{% endif %}>
           <span aria-hidden="true">G</span> Continuar con Google
         </a>
+        {% if demo_login_enabled and not auth_identity %}
+          <section class="auth-demo-access" aria-labelledby="demo-access-title">
+            <h3 id="demo-access-title">Acceso local de demostración</h3>
+            <p class="form-note">Solo disponible en este equipo y con datos aislados.</p>
+            <div class="auth-demo-grid">
+              {% for slug, label in [('client', 'Cliente'), ('trainer', 'Entrenador'), ('manager', 'Jefe de sede'), ('admin', 'Administrador'), ('technician', 'Técnico')] %}
+                <form method="post" action="{{ url_for('auth.demo_login', role_slug=slug) }}"><button class="button button-secondary" type="submit">{{ label }}</button></form>
+              {% endfor %}
+            </div>
+          </section>
+        {% endif %}
         <section id="authenticated-session" class="auth-form" aria-live="polite"{% if not auth_identity %} hidden{% endif %}>
           <p id="session-summary" class="form-note">{% if auth_identity %}Sesión iniciada como {{ auth_identity.user.nombre }} {{ auth_identity.user.apellido }} · {{ auth_identity.user.rol }} (ID FitPath {{ auth_identity.user.id }}).{% endif %}</p>
-          {% if auth_identity and auth_identity.user.rol == 'Cliente' %}
-            <a id="client-home-link" class="button button-primary button-full" href="{{ url_for('client_views.client_home') }}">Ir al inicio Cliente</a>
+          {% if auth_identity and dashboard_url %}
+            <a id="client-home-link" class="button button-primary button-full" href="{{ dashboard_url }}">Ir al panel {{ auth_identity.user.rol }}</a>
           {% endif %}
           <form id="logout-form" method="post" action="{{ url_for('auth.logout') }}">
             <input type="hidden" name="csrf_token" value="{{ auth_identity.csrf_token if auth_identity else '' }}">

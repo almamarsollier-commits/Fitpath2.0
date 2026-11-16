@@ -49,7 +49,7 @@ def capabilities():
             ],
             "write": [],
             "disabled": ["enrollments.create", "enrollments.cancel"],
-            "reason": "membership_eligibility_and_cancellation_not_implemented",
+            "reason": "assistant_is_read_only",
         }
     )
 

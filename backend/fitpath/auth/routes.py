@@ -4,7 +4,7 @@ import hmac
 import secrets
 
 from authlib.integrations.base_client.errors import OAuthError
-from flask import Blueprint, current_app, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, session, url_for
 
 from ..database import get_db
 from . import GOOGLE_ISSUER, get_oauth
@@ -20,6 +20,21 @@ auth_blueprint = Blueprint(
     static_folder="../../../statics",
     static_url_path="/static",
 )
+
+ROLE_HOME_ENDPOINTS = {
+    "Cliente": "client_views.client_home",
+    "Entrenador": "role_views.trainer_home",
+    "Jefe de sede": "role_views.manager_home",
+    "Administrador": "role_views.admin_home",
+    "Técnico de mantenimiento": "role_views.technician_home",
+}
+
+
+def _home_url(identity):
+    if not identity:
+        return None
+    endpoint = ROLE_HOME_ENDPOINTS.get(identity["user"]["rol"])
+    return url_for(endpoint) if endpoint else None
 
 
 def _current_fitpath_identity():
@@ -66,10 +81,44 @@ def login_page():
                 "auth/login.html",
                 error=request.args.get("error"),
                 auth_identity=_current_fitpath_identity(),
+                dashboard_url=_home_url(_current_fitpath_identity()),
+                demo_login_enabled=current_app.config.get("DEMO_LOGIN_ENABLED", False),
                 logout_success=request.args.get("logout") == "1",
             )
         )
     )
+
+
+@auth_blueprint.post("/demo-login/<role_slug>")
+def demo_login(role_slug):
+    if not current_app.config.get("DEMO_LOGIN_ENABLED"):
+        abort(404)
+    if request.remote_addr not in {"127.0.0.1", "::1"}:
+        abort(404)
+    from ..demo_data import DEMO_USERS
+
+    demo = DEMO_USERS.get(role_slug)
+    if demo is None:
+        abort(404)
+    role, username, _email = demo
+    user = get_db().execute(
+        """
+        SELECT u.id_usuario, r.nombre AS rol
+        FROM usuarios u JOIN roles r ON r.id_rol = u.rol_id
+        WHERE u.nombre_usuario = ? AND u.activo = 1 AND r.nombre = ?
+        """,
+        (username, role),
+    ).fetchone()
+    if user is None:
+        return render_template("auth/login.html", error="demo_unavailable"), 503
+    endpoint = ROLE_HOME_ENDPOINTS.get(user["rol"])
+    if endpoint is None:
+        abort(403)
+    session.clear()
+    session.permanent = True
+    session["fitpath_user_id"] = user["id_usuario"]
+    session["csrf_token"] = secrets.token_urlsafe(32)
+    return redirect(url_for(endpoint))
 
 
 @auth_blueprint.get("/google/login")
@@ -142,7 +191,11 @@ def google_callback():
     session.permanent = True
     session["fitpath_user_id"] = user["id_usuario"]
     session["csrf_token"] = secrets.token_urlsafe(32)
-    return redirect(url_for("client_views.client_home"))
+    endpoint = ROLE_HOME_ENDPOINTS.get(user["rol"])
+    if endpoint is None:
+        session.clear()
+        return render_template("auth/login.html", error="role_unavailable"), 403
+    return redirect(url_for(endpoint))
 
 
 @auth_blueprint.get("/me")

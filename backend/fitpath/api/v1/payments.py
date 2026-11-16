@@ -1,6 +1,8 @@
 """Membresías, deudas e intentos Checkout Pro del Cliente autenticado."""
 
 import hmac
+import sqlite3
+from datetime import date
 
 from flask import Blueprint, current_app, jsonify, request
 
@@ -174,6 +176,138 @@ def client_payments():
     if client_id is None:
         return jsonify({"error": "client_profile_required"}), 403
     return jsonify(_payment_summary(client_id))
+
+
+@payments_api_blueprint.get("/client/memberships")
+@client_payment_required
+def client_memberships():
+    client_id = _client_id()
+    if client_id is None:
+        return jsonify({"error": "client_profile_required"}), 403
+    connection = get_db()
+    memberships = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT m.id_membresia AS id, m.nombre, m.descripcion,
+                   m.precio_unidades_menores, m.moneda, mo.decimales,
+                   GROUP_CONCAT(b.nombre, ' · ') AS beneficios
+            FROM membresias m
+            JOIN monedas mo ON mo.codigo = m.moneda
+            LEFT JOIN membresia_beneficio mb ON mb.membresia_id = m.id_membresia
+            LEFT JOIN beneficios b ON b.id_beneficio = mb.beneficio_id
+            WHERE m.activa = 1
+            GROUP BY m.id_membresia
+            ORDER BY m.precio_unidades_menores, m.nombre
+            """
+        ).fetchall()
+    ]
+    active = connection.execute(
+        """
+        SELECT cm.id_cliente_membresia AS id, cm.membresia_id,
+               m.nombre, cm.fecha_inicio, cm.fecha_fin
+        FROM cliente_membresia cm
+        JOIN membresias m ON m.id_membresia = cm.membresia_id
+        WHERE cm.cliente_id = ? AND cm.estado = 'activa'
+        """,
+        (client_id,),
+    ).fetchone()
+    return jsonify(
+        {"memberships": memberships, "active": dict(active) if active else None}
+    )
+
+
+@payments_api_blueprint.post("/client/memberships/<int:membership_id>/select")
+@client_payment_required
+def select_client_membership(membership_id):
+    if not _csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    client_id = _client_id()
+    if client_id is None:
+        return jsonify({"error": "client_profile_required"}), 403
+    connection = get_db()
+    membership = connection.execute(
+        """
+        SELECT id_membresia, nombre, precio_unidades_menores, moneda
+        FROM membresias WHERE id_membresia = ? AND activa = 1
+        """,
+        (membership_id,),
+    ).fetchone()
+    if membership is None:
+        return jsonify({"error": "membership_not_found"}), 404
+    today = date.today().isoformat()
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        active = connection.execute(
+            "SELECT id_cliente_membresia FROM cliente_membresia WHERE cliente_id = ? AND estado = 'activa'",
+            (client_id,),
+        ).fetchone()
+        if active is not None:
+            connection.rollback()
+            return jsonify({"error": "active_membership_exists"}), 409
+        existing = connection.execute(
+            """
+            SELECT cm.id_cliente_membresia, d.id_deuda
+            FROM cliente_membresia cm
+            LEFT JOIN deudas d
+              ON d.cliente_membresia_id = cm.id_cliente_membresia
+             AND d.cliente_id = cm.cliente_id AND d.estado = 'pendiente'
+            WHERE cm.cliente_id = ? AND cm.membresia_id = ?
+              AND cm.estado = 'vencida'
+            ORDER BY cm.id_cliente_membresia DESC LIMIT 1
+            """,
+            (client_id, membership_id),
+        ).fetchone()
+        if existing is not None and existing["id_deuda"] is not None:
+            connection.rollback()
+            return jsonify(
+                {
+                    "error": "membership_obligation_exists",
+                    "debt_id": existing["id_deuda"],
+                }
+            ), 409
+        initial_state = (
+            "activa" if membership["precio_unidades_menores"] == 0 else "vencida"
+        )
+        subscription_id = connection.execute(
+            """
+            INSERT INTO cliente_membresia
+                (cliente_id, membresia_id, fecha_inicio, fecha_fin, estado)
+            VALUES (?, ?, ?, NULL, ?)
+            """,
+            (client_id, membership_id, today, initial_state),
+        ).lastrowid
+        debt_id = None
+        if membership["precio_unidades_menores"] > 0:
+            debt_id = connection.execute(
+                """
+                INSERT INTO deudas
+                    (cliente_id, cliente_membresia_id, concepto,
+                     importe_unidades_menores, moneda, vence_el)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    client_id,
+                    subscription_id,
+                    f"Membresía {membership['nombre']} · {today}",
+                    membership["precio_unidades_menores"],
+                    membership["moneda"],
+                    today,
+                ),
+            ).lastrowid
+        connection.commit()
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return jsonify({"error": "membership_selection_conflict"}), 409
+    return jsonify(
+        {
+            "subscription": {
+                "id": subscription_id,
+                "status": initial_state,
+                "debt_id": debt_id,
+            }
+        }
+    ), 201
 
 
 @payments_api_blueprint.post("/client/payment-intents")

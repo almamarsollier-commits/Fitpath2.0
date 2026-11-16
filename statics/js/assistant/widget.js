@@ -20,20 +20,20 @@
 
     const launcher = element("button", "fp-assistant-launcher");
     launcher.type = "button";
-    launcher.setAttribute("aria-label", "Abrir FitPath Smart Assistant");
+    launcher.setAttribute("aria-label", "Abrir Asistente de IA");
     launcher.setAttribute("aria-expanded", "false");
-    launcher.innerHTML = '<span aria-hidden="true">✦</span><span>Asistente</span>';
+    launcher.innerHTML = '<span aria-hidden="true">✦</span><span>Asistente de IA</span>';
 
     const panel = element("div", "fp-assistant-panel");
     panel.hidden = !settings.expanded;
     panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-label", "FitPath Smart Assistant");
+    panel.setAttribute("aria-label", "Asistente de IA de FitPath");
 
     const header = element("header", "fp-assistant-header");
     const heading = element("div", "fp-assistant-heading");
     heading.append(element("span", "fp-assistant-mark", "✦"));
     const title = element("span");
-    title.append(element("strong", "", "FitPath Smart Assistant"), element("small", "", "Orientación general y acceso a FitPath"));
+    title.append(element("strong", "", "Asistente de IA"), element("small", "", "Orientación general y acceso a FitPath"));
     heading.append(title);
     const close = element("button", "fp-assistant-close", "×");
     close.type = "button";

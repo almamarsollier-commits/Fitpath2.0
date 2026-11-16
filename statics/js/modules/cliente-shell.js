@@ -1,6 +1,7 @@
 import { initializeDrawer } from "./navigation-drawer.js";
+import { initializeClientData } from "./client-data.js";
 import { initializePayments } from "./payments.js";
-import { clienteDemo } from "../data/cliente-demo.js";
+import { initializeAccountProfile } from "./profile.js";
 import { initializeSmartAssistant } from "../assistant/loader.js";
 
 const routes = {
@@ -93,7 +94,7 @@ function renderSidebar(activeSection) {
   brandRow.append(close);
 
   const user = element("div", "fp-client-side-heading");
-  user.append(element("span", "fp-client-avatar", clienteDemo.profile.initials));
+  user.append(element("span", "fp-client-avatar", "FP"));
   const userText = element("span");
   const identityLabel = element("small", "", "Sesión Cliente");
   identityLabel.dataset.fitpathIdentity = "";
@@ -137,7 +138,7 @@ function renderSidebar(activeSection) {
   logoutForm.append(csrfInput, logoutButton);
 
   bottom.append(tip, logoutStatus, logoutForm);
-  const version = element("p", "fp-sidebar-version", "FITPATH 2.0 · DEMO CLIENTE");
+  const version = element("p", "fp-sidebar-version", "FITPATH 2.0 · ESPACIO CLIENTE");
   bottom.append(version);
   sidebar.replaceChildren(brandRow, user, nav, bottom);
 }
@@ -157,22 +158,6 @@ function renderBreadcrumbs(view) {
       link.href = part.href;
       nav.append(link);
     }
-  });
-}
-
-function getDemoValue(key, query) {
-  if (key === "exercise.name" || key.startsWith("exercise.")) {
-    const slug = query.get("ejercicio") || "press-mancuernas";
-    return clienteDemo.exercises[slug]?.[key.slice("exercise.".length)];
-  }
-  return key.split(".").reduce((value, part) => value?.[part], clienteDemo);
-}
-
-function hydrateDemoContent() {
-  const query = new URLSearchParams(window.location.search);
-  document.querySelectorAll("[data-demo-text]").forEach((node) => {
-    const value = getDemoValue(node.dataset.demoText, query);
-    if (typeof value === "string") node.textContent = value;
   });
 }
 
@@ -199,6 +184,21 @@ async function initializeProfileImage(identity, fullName) {
     status.textContent = message;
     status.dataset.error = isError ? "true" : "false";
   };
+
+  let previewUrl = null;
+  input?.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
+    if (!file) return;
+    if (!file.type.match(/^image\/(jpeg|png|webp)$/) || file.size > 5 * 1024 * 1024) {
+      setStatus("Elegí una imagen JPEG, PNG o WebP de hasta 5 MiB.", true);
+      return;
+    }
+    previewUrl = URL.createObjectURL(file);
+    showProfileImage(previewUrl, fullName);
+    setStatus("Previsualización lista. Confirmá con Guardar foto.");
+  });
 
   try {
     const response = await fetch("/api/v1/client/profile-image", {
@@ -246,6 +246,8 @@ async function initializeProfileImage(identity, fullName) {
       if (!response.ok) throw new Error(payload.message || payload.error || "upload_failed");
       if (payload.image?.url) showProfileImage(payload.image.url, fullName);
       form.reset();
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = null;
       setStatus("Tu foto se guardó de forma privada.");
     } catch (error) {
       const message = error.message === "storage_not_configured"
@@ -261,7 +263,6 @@ async function initializeProfileImage(identity, fullName) {
 const view = viewMap[document.body.dataset.clientView] ?? viewMap["inicio-resumen"];
 renderSidebar(view.section);
 renderBreadcrumbs(view);
-hydrateDemoContent();
 
 initializeDrawer({
   panel: document.querySelector("#fp-sidebar"),
@@ -310,6 +311,8 @@ async function initializeFitPathSession() {
     if (csrfInput) csrfInput.value = identity.csrf_token;
     if (logoutButton) logoutButton.disabled = false;
     await initializeProfileImage(identity, fullName);
+    await initializeAccountProfile({ csrfToken: identity.csrf_token });
+    await initializeClientData({ csrfToken: identity.csrf_token });
     await initializePayments({ csrfToken: identity.csrf_token });
 
     logoutForm?.addEventListener("submit", async (event) => {

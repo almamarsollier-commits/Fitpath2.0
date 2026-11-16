@@ -52,6 +52,7 @@ class BaseConfig:
     MERCADOPAGO_WEBHOOK_TOLERANCE_SECONDS = os.environ.get(
         "MERCADOPAGO_WEBHOOK_TOLERANCE_SECONDS", "300"
     )
+    DEMO_LOGIN_ENABLED = os.environ.get("FITPATH_DEMO_LOGIN_ENABLED") == "1"
 
 
 class DevelopmentConfig(BaseConfig):

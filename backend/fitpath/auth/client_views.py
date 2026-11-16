@@ -15,16 +15,10 @@ PUBLIC_STATICS = PROJECT_ROOT / "statics"
 
 CLIENT_VIEW_PATHS = (
     "inicio/resumen.html",
-    "inicio/actividad.html",
-    "inicio/proxima-clase.html",
     "clases/index.html",
-    "clases/detalle.html",
     "clases/reservas.html",
     "rutina/semana.html",
-    "rutina/entrenamiento.html",
-    "rutina/ejercicio.html",
     "progreso/index.html",
-    "progreso/evolucion.html",
     "perfil/index.html",
     "perfil/membresia.html",
 )
