@@ -48,7 +48,7 @@ class GoogleAuthTests(unittest.TestCase):
         self.addCleanup(self.db.close)
         self.assertEqual(
             apply_migrations(self.db, self.app.config["MIGRATIONS_DIR"]),
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
         )
         self.db.execute("INSERT INTO roles (nombre) VALUES ('Cliente')")
         self.db.execute(
@@ -228,7 +228,12 @@ class GoogleAuthTests(unittest.TestCase):
             page = self.client.get(f"/templates/cliente/{relative_path}")
             self.assertEqual(page.status_code, 200, relative_path)
             self.assertEqual(page.mimetype, "text/html", relative_path)
-            self.assertIn(b"fictic", page.data.lower(), relative_path)
+            expected_marker = (
+                b"modo prueba"
+                if relative_path == "perfil/membresia.html"
+                else b"fictic"
+            )
+            self.assertIn(expected_marker, page.data.lower(), relative_path)
             for value in re.findall(r'(?:href|src)="([^"]+)"', page.get_data(as_text=True)):
                 path = urlsplit(value).path
                 if path.startswith(("/templates/cliente/", "/templates/landing.html", "/statics/")):

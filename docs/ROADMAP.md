@@ -94,6 +94,8 @@ Todas las filas tienen prioridad **MVP aprobada**; no se establece un orden inte
 
 **Dependencias:** alcance de integración, autenticación y backend.
 
+**Avance 2026-11-16:** implementado Checkout Pro de Mercado Pago en modo de prueba con intentos persistentes, consulta autoritativa, Webhooks firmados e idempotentes y actualización transaccional de deudas/membresías. Pendiente validar conectividad real con credenciales de prueba y una URL pública HTTPS.
+
 ## Bloque 6 — FitPath Smart Assistant portable
 
 **Objetivo:** incorporar orientación fitness general y acceso conversacional a funciones autorizadas mediante un motor JavaScript Vanilla local, sin modelos, servicios pagos ni conexión obligatoria.

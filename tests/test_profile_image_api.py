@@ -56,7 +56,7 @@ class ProfileImageApiTests(unittest.TestCase):
         self.addCleanup(self.db.close)
         self.assertEqual(
             apply_migrations(self.db, self.app.config["MIGRATIONS_DIR"]),
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
         )
         seed_initial_roles(self.db)
         seed_initial_permissions(self.db)

@@ -67,6 +67,10 @@ class BackendInfrastructureTests(unittest.TestCase):
                 "/api/v1/assistant/progress",
                 "/api/v1/assistant/membership",
                 "/api/v1/client/profile-image",
+                "/api/v1/client/payments",
+                "/api/v1/client/payment-intents",
+                "/api/v1/client/payment-intents/confirm",
+                "/api/v1/payments/mercado-pago/webhook",
             },
         )
         self.assertFalse(development_database.exists())

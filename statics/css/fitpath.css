@@ -1546,6 +1546,30 @@ h1, h2, h3 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacing: -.04
 .fp-showcase .cl-profile-image-form input { width: 100%; padding: 0.55rem; color: #e7edef; background: #151a1c; border: 1px solid #3b4549; border-radius: 0.55rem; font: inherit; }
 .fp-showcase .cl-profile-image-form input::file-selector-button { margin-right: 0.55rem; padding: 0.45rem 0.65rem; color: #18200f; background: var(--fp-lime); border: 0; border-radius: 0.4rem; font-weight: 800; cursor: pointer; }
 .fp-showcase [data-profile-image-status][data-error="true"] { color: #ffb5ad; }
+.fp-showcase .cl-payment-section { margin-top: 1.4rem; }
+.fp-showcase .cl-payment-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 0.8rem; }
+.fp-showcase .cl-debt-card { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; padding: 1rem; }
+.fp-showcase .cl-debt-heading { display: flex; width: 100%; align-items: flex-start; justify-content: space-between; gap: 0.8rem; }
+.fp-showcase .cl-debt-heading h3 { margin: 0.25rem 0 0; color: #f4f6f7; font-size: 1rem; }
+.fp-showcase .cl-debt-card p { margin: 0; color: #aeb9bd; font-size: 0.74rem; line-height: 1.5; }
+.fp-showcase .cl-debt-amount { color: var(--fp-lime); font-size: 1.35rem; letter-spacing: -0.04em; }
+.fp-showcase .fp-payment-status { display: inline-flex; align-items: center; padding: 0.3rem 0.55rem; color: #dce4e7; background: #30393d; border-radius: 999px; font-size: 0.62rem; font-weight: 800; white-space: nowrap; }
+.fp-showcase .fp-payment-status.is-aprobado,
+.fp-showcase .fp-payment-status.is-pagada,
+.fp-showcase .fp-payment-status.is-activa { color: #17200d; background: var(--fp-lime); }
+.fp-showcase .fp-payment-status.is-rechazado,
+.fp-showcase .fp-payment-status.is-error,
+.fp-showcase .fp-payment-status.is-vencida { color: #ffd4cf; background: #632d29; }
+.fp-showcase .cl-payment-page-status { padding: 0.7rem 0.85rem; color: #dce4e7; background: #20272a; border: 1px solid #3a4448; border-radius: 0.65rem; font-size: 0.75rem; }
+.fp-showcase .cl-payment-page-status[data-error="true"] { color: #ffd4cf; border-color: #78423d; }
+.fp-showcase .cl-payment-history { padding: 0.9rem; }
+.fp-showcase .cl-payment-history-list { display: grid; gap: 0; padding: 0; margin: 0; list-style: none; }
+.fp-showcase .cl-payment-history-list li { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.75rem 0; border-bottom: 1px solid #30393d; }
+.fp-showcase .cl-payment-history-list li:last-child { border-bottom: 0; }
+.fp-showcase .cl-payment-history-list span:first-child { display: grid; gap: 0.2rem; }
+.fp-showcase .cl-payment-history-list strong { color: #f1f4f5; font-size: 0.76rem; }
+.fp-showcase .cl-payment-history-list small,
+.fp-showcase .cl-payment-empty { color: #9eaaaf; font-size: 0.68rem; }
 .fp-showcase .cl-class-grid { display: grid; gap: 0.8rem; }
 .fp-showcase .cl-class-tile { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 0.6rem; padding: 1.1rem; background: #fff; border: 1px solid #dfe5e7; border-radius: var(--fp-radius-md); box-shadow: 0 0.55rem 1.45rem rgb(13 15 16 / 4%); }
 .fp-showcase .cl-class-tile-dark { color: #f7f9fa; background: #1b2124; border-color: #30393d; }

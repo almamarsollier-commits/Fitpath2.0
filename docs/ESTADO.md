@@ -129,6 +129,16 @@ Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membr
 - Node no está disponible en el entorno actual, por lo que no se repitió la suite JavaScript del Asistente de IA; sus tres pruebas API Python sí pasaron dentro de la regresión.
 - Tampoco existen bucket, región, perfil AWS, credenciales ni AWS CLI configurados. La comunicación real con AWS continúa pendiente y está documentada en `docs/AWS_S3.md` sin solicitar ni exponer secretos.
 
+## Mercado Pago — Checkout Pro de prueba (2026-11-16)
+
+- La migración 0011 agrega estados de deuda, intentos de pago persistentes y eventos Webhook idempotentes. Los importes, monedas y conceptos se obtienen desde SQLite y el Cliente solo puede iniciar o confirmar pagos vinculados a sus propias deudas.
+- Checkout Pro usa la API REST vigente para crear preferencias y consultar cada pago. FitPath exige credenciales declaradas como prueba, utiliza `sandbox_init_point` y rechaza respuestas `live_mode=true`.
+- El Webhook valida `x-signature` con HMAC-SHA256 y ventana temporal, registra `x-request-id` y consulta el pago en Mercado Pago antes de cambiar datos. Pago, deuda y posible reactivación de membresía se actualizan dentro de una transacción `BEGIN IMMEDIATE`.
+- La pantalla **Membresía** muestra datos persistentes, estados comprensibles, deudas propias, historial y el botón de Checkout Pro. No se agregó SDK ni dependencia: se reutilizó `requests`.
+- Existe una carga demo protegida por `--confirm-development-data`, pero no se ejecutó sobre ninguna SQLite porque falta la autorización específica del usuario.
+- Las 10 pruebas focalizadas de Mercado Pago finalizaron en `OK`. La primera regresión de 147 pruebas detectó una expectativa visual obsoleta, corregida para distinguir esta vista real en modo de prueba; queda registrada una segunda ejecución completa antes del commit.
+- No hay Access Token de prueba, secreto Webhook ni URL pública HTTPS configurados en este entorno. Por lo tanto, no se afirma conectividad real; la configuración y demostración pendiente están documentadas en `docs/MERCADO_PAGO.md`.
+
 ## FitPath Smart Assistant — Portable e integrado (2026-11-15)
 
 - Se reemplazó el alcance de IA externa por un motor conversacional determinista en JavaScript Vanilla, sin Ollama, APIs, modelos, plugins, nuevas dependencias ni conexión obligatoria.
@@ -141,6 +151,7 @@ Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membr
 
 ## Próximo paso
 
-1. Definir la elegibilidad por membresía y el servicio transaccional de cancelación antes de habilitar mutaciones del asistente.
-2. Validar AWS S3 contra un bucket privado configurado antes de afirmar que la integración externa funciona.
-3. Para ejecutar todo FitPath sin Python, autorizar y probar un bloque separado de empaquetado Windows; la demostración estática ya es portable.
+1. Validar AWS S3 contra el bucket privado existente antes de afirmar que la integración externa funciona.
+2. Configurar credenciales Mercado Pago de prueba y una URL HTTPS para ejecutar la demostración real de Checkout Pro y Webhooks.
+3. Autorizar, si se desea, la carga demo controlada sobre la SQLite de desarrollo.
+4. Definir la elegibilidad por membresía y el servicio transaccional de cancelación antes de habilitar mutaciones del asistente.

@@ -26,7 +26,7 @@ class ObjectiveRoutineSchemaTests(unittest.TestCase):
         self.addCleanup(self.connection.close)
         self.assertEqual(
             apply_migrations(self.connection, MIGRATIONS_DIR),
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
         )
         seed_initial_roles(self.connection)
         self.client_role_id = self.role_id("Cliente")
@@ -339,7 +339,7 @@ class ObjectiveRoutineSchemaTests(unittest.TestCase):
             self.connection.execute(
                 "SELECT count(*) FROM schema_migrations"
             ).fetchone()[0],
-            10,
+            11,
         )
         self.assertEqual(
             self.connection.execute("PRAGMA foreign_key_check").fetchall(), []

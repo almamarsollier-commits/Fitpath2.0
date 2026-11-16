@@ -1,4 +1,5 @@
 import { initializeDrawer } from "./navigation-drawer.js";
+import { initializePayments } from "./payments.js";
 import { clienteDemo } from "../data/cliente-demo.js";
 import { initializeSmartAssistant } from "../assistant/loader.js";
 
@@ -309,6 +310,7 @@ async function initializeFitPathSession() {
     if (csrfInput) csrfInput.value = identity.csrf_token;
     if (logoutButton) logoutButton.disabled = false;
     await initializeProfileImage(identity, fullName);
+    await initializePayments({ csrfToken: identity.csrf_token });
 
     logoutForm?.addEventListener("submit", async (event) => {
       event.preventDefault();

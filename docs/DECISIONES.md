@@ -94,7 +94,7 @@ No bloquean el MVP visual:
 
 - Identificador de acceso y vínculo entre cuentas locales y Google OAuth: antes del Bloque 3.
 - Alta y asignación de perfiles del personal: antes de implementar autenticación y administración persistente.
-- Métodos, proveedor y flujo de pagos reales: antes de implementar pagos persistentes. Los estados internos del modelo quedaron aprobados para el esquema.
+- El paso futuro a credenciales productivas, cobros reales, reembolsos y contracargos requiere una decisión y un bloque separados. La integración actual se limita a Checkout Pro de prueba.
 - Revisión visual de cardinalidades y relaciones de los diagramas: completada para preparar la propuesta del Bloque 2; las tablas principales del esquema se incorporaron mediante las migraciones 0001–0008 y permanecen pendientes reglas de negocio y servicios.
 - Verificación de concurrencia, tiempos de respuesta y disponibilidad: al definir backend y entorno de ejecución.
 - Alcance de archivos en S3 y flujos de Calendar: antes de sus respectivos bloques. El alcance portable de Smart Assistant quedó aprobado y documentado.
@@ -133,6 +133,16 @@ No bloquean el MVP visual:
 - SQLite conserva solamente la clave opaca del objeto; el bucket permanece privado y el navegador recibe URLs prefirmadas con vigencia máxima de 15 minutos.
 - Las claves se aíslan por `clientes/{id}/perfil`; la API comprueba sesión, rol, permiso, propiedad y CSRF antes de modificar la referencia.
 - Bucket, región y credenciales se configuran fuera del repositorio. La validación contra AWS queda pendiente mientras no exista configuración local.
+
+### Checkout Pro de Mercado Pago en modo de prueba (2026-11-16)
+
+- Se utiliza la API REST vigente sin SDK adicional. Las credenciales se mantienen fuera del repositorio y `MERCADOPAGO_CREDENTIAL_SCOPE=test` es obligatorio.
+- El frontend nunca define importes, conceptos ni moneda: envía una deuda propia y el backend toma esos valores desde SQLite.
+- Cada intento conserva un snapshot persistente y una referencia externa opaca. Solo se devuelve `sandbox_init_point`; cualquier pago informado por el proveedor con `live_mode=true` se rechaza.
+- El retorno del navegador y los Webhooks no son autoridad por sí mismos. Flask consulta `GET /v1/payments/{id}` y verifica referencia, importe, moneda y propietario antes de conciliar.
+- Los Webhooks requieren firma HMAC válida y se deduplican por `x-request-id`. La actualización de pago, deuda y membresía es transaccional y no degrada un pago ya aprobado por una notificación tardía.
+- La carga de membresía/deuda demo es una herramienta explícita de desarrollo: requiere autorización del usuario y el indicador `--confirm-development-data`. No se ejecuta automáticamente.
+- Producción, cobros reales, reembolsos, contracargos y sus reglas contables quedan fuera de este alcance.
 
 ### Decisiones pendientes antes de implementar sus módulos
 
