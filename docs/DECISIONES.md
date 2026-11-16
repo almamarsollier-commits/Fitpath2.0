@@ -97,7 +97,7 @@ No bloquean el MVP visual:
 - Métodos, proveedor y flujo de pagos reales: antes de implementar pagos persistentes. Los estados internos del modelo quedaron aprobados para el esquema.
 - Revisión visual de cardinalidades y relaciones de los diagramas: completada para preparar la propuesta del Bloque 2; las tablas principales del esquema se incorporaron mediante las migraciones 0001–0008 y permanecen pendientes reglas de negocio y servicios.
 - Verificación de concurrencia, tiempos de respuesta y disponibilidad: al definir backend y entorno de ejecución.
-- Alcance de archivos en S3, flujos de Calendar y agente de IA: antes de sus respectivos bloques.
+- Alcance de archivos en S3 y flujos de Calendar: antes de sus respectivos bloques. El alcance portable de Smart Assistant quedó aprobado y documentado.
 
 ### Decisiones aprobadas para el esquema del Bloque 2 (2026-11-08)
 
@@ -111,6 +111,20 @@ No bloquean el MVP visual:
 
 - Una clase puede generar como máximo una remuneración: `remuneraciones.clase_id` es único. Una clase puede no tener remuneración; una remuneración anulada permanece en el historial y no habilita crear otra para esa clase.
 - El entrenador destinatario se obtiene de la clase. Una vez creada la remuneración, la base impide reasignar el entrenador de esa clase y cambiar la remuneración a otra clase.
+
+### Autorización incremental de vistas Cliente (2026-11-15)
+
+- Los permisos se incorporan únicamente cuando existe una función protegible. El primer permiso administrado es `cliente.vistas.ver`, asignado solo al rol Cliente mediante un seed explícito e idempotente.
+- Las vistas Cliente requieren sesión activa, rol persistido y permiso persistido. El frontend no concede permisos y el backend deniega por defecto cuando falta alguno de esos controles.
+- Los permisos de Entrenador, Jefe de sede, Administrador y Técnico se definirán junto con sus endpoints o dashboards reales; no se crean catálogos especulativos.
+
+### FitPath Smart Assistant portable (2026-11-15)
+
+- Se descartan Ollama, OpenAI API, modelos instalables, plugins y servicios pagos. El asistente usa únicamente HTML, CSS y JavaScript Vanilla con una base de conocimientos local y extensible.
+- La demostración estática debe responder consultas generales sin Flask ni internet. Las funciones reales se distinguen visualmente y sólo acceden al backend autenticado del mismo origen.
+- El permiso `cliente.datos.ver` habilita exclusivamente lecturas propias implementadas. No concede acceso a otros clientes, sedes o roles.
+- Toda mutación requiere reglas de negocio completas, endpoint autorizado y confirmación explícita. Mientras falte cualquiera de esos controles, se informa como no disponible y no se simula éxito.
+- Un ejecutable autocontenido del backend es un entregable de empaquetado separado; copiar el repositorio a una PC sin Python no ejecuta Flask.
 
 ### Decisiones pendientes antes de implementar sus módulos
 

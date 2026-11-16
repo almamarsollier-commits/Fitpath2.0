@@ -1,9 +1,9 @@
 # FitPath 2.0 — Estado del proyecto
 
-**Fecha de revisión:** 2026-11-11
-**Repositorio:** C:/Proyectos/Fitpath2.0
-**Rama:** fitpath
-**Seguimiento remoto:** origin/fitpath
+**Fecha de revisión:** 2026-11-16
+**Repositorio:** C:/Users/marso/OneDrive/Escritorio/Fithpad2.0/Fitpath2.0
+**Rama:** feat/google-auth
+**Seguimiento remoto:** origin/feat/google-auth
 
 ## Estado de Git
 
@@ -98,27 +98,47 @@ Siguen vigentes las 15 decisiones arquitectónicas originales y los acuerdos com
 
 Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membresía; autorización del entrenador para registrar asistencia; tratamiento de clases e inscripciones canceladas; pertenencia del objetivo al cliente en rutinas y planes de alimentación; conversión de horarios locales a UTC; solapamientos de disponibilidad; normalización Unicode de nombres de actividades; asignación y autorización entre entrenador y cliente; e identificador de inicio de sesión.
 
+## M11 — Entorno recuperado y Google OAuth validado (2026-11-16)
+
+- Se confirmó el clon activo, la rama `feat/google-auth`, HEAD `154bcd06` y sincronización `+0/-0` con `origin/feat/google-auth` antes de los cambios locales.
+- El entorno virtual preparado está en `Fithpad2.0/.venv`, no en `.venv` de la raíz. Usa Python 3.15.2, Flask 3.1.3, Authlib 1.9.5 y SQLite 3.53.4. Se instaló `requests==2.34.2`, ya declarado en `requirements.txt`, porque faltaba y Authlib no podía importar.
+- El clon no contiene `gimnasio.db`. Las pruebas se corrigieron para comprobar que el archivo heredado permanezca sin cambios cuando existe o continúe ausente en un clon limpio; no se fabricó ni recuperó esa base.
+- Se creó la base local ignorada `backend/instance/fitpath-development.sqlite3`. Las migraciones 0001–0009 se aplicaron una vez y la segunda ejecución fue idempotente. `foreign_key_check` devolvió cero filas e `integrity_check` devolvió `ok`.
+- El mapa Flask efectivo contiene `/auth/login`, `/auth/google/login`, `/auth/google/callback`, `/auth/me`, `/auth/logout` y `/auth/cliente`.
+- El servidor oficial se inició con `backend.fitpath:create_app` en `localhost:5000`. `GET /auth/login` devolvió 200, `GET /auth/me` 401 sin sesión y `GET /auth/cliente` 302 hacia `/auth/login`; el 404 anterior quedó resuelto y se atribuye al servidor/clon antiguo.
+- `GET /auth/google/login` generó la redirección OIDC con el callback local configurado. El flujo real completó callback, sesión, `/auth/me` autenticado y dashboard Cliente.
+- La solicitud aprobada quedó vinculada exclusivamente a `client1` (ID FitPath 2), activo y con rol y perfil Cliente. `m11_demo_cliente` (ID 1) no recibió una identidad Google.
+- El cierre manual registró `POST /auth/logout` con redirección y dos consultas posteriores a `/auth/me` devolvieron 401, confirmando la invalidación de la sesión.
+- La regresión completa ejecutó 129 pruebas en 95.357 segundos: `OK`. Incluye OIDC aislado, nonce/state, sesiones, CSRF, logout, rutas Cliente, permisos, migraciones y servicios previos.
+- Los PDFs SRS, Story Mapping y diagramas citados por `docs/DECISIONES.md` no están presentes en este clon. Se usaron únicamente los requisitos ya transcritos en la documentación versionada.
+
+## M12 — Autorización incremental (2026-11-15)
+
+- Las vistas Cliente requieren sesión activa, rol `Cliente` consultado desde SQLite y el permiso persistido `cliente.vistas.ver`. El acceso se deniega por defecto si falta cualquiera de los tres controles.
+- El nuevo seed de permisos es explícito e idempotente y asigna solo el permiso de las vistas ya implementadas al rol Cliente. No crea usuarios ni amplía accesos a otros roles.
+- Las pruebas puntuales aprobaron: 21 de autenticación/autorización y 12 de identidad/permisos.
+- Los dashboards y endpoints de Entrenador, Jefe de sede, Administrador y Técnico todavía no existen en el backend actual. No se inventaron permisos para funciones ausentes ni se presentó el panel genérico con datos ficticios como una implementación real.
+- `origin/APIs` corresponde al prototipo Express, versiona dependencias y la base heredada, y no contiene autorización Flask reutilizable; no se hizo merge ni se copiaron sus artefactos.
+
+## Bloque 4 — Servicio AWS S3 preparado (2026-11-15)
+
+- No existía integración previa; `boto3` ya estaba declarado e instalado en el entorno.
+- Se agregó un servicio Flask lazy y configurable para carga privada y recuperación mediante URL temporal. Valida allowlist MIME, tamaño real, prefijo, cifrado y duración; no crea ACL pública ni expone credenciales.
+- No se agregaron endpoints porque la documentación no define tipos de archivo, entidades propietarias, retención ni roles por caso. Esos requisitos quedan registrados en `docs/AWS_S3.md`.
+- Cinco pruebas locales con cliente falso aprobaron en 0.122 segundos. No se realizó una prueba contra AWS ni se validaron credenciales reales.
+
+## FitPath Smart Assistant — Portable e integrado (2026-11-15)
+
+- Se reemplazó el alcance de IA externa por un motor conversacional determinista en JavaScript Vanilla, sin Ollama, APIs, modelos, plugins, nuevas dependencias ni conexión obligatoria.
+- La base estructurada cubre entrenamiento, técnica, recuperación, anatomía básica, nutrición general, macronutrientes, calorías, hidratación y hábitos. Incluye normalización, sinónimos, errores frecuentes, coincidencia aproximada, ambigüedad, contexto reciente y seguimientos.
+- El chat flotante se integró en las vistas Cliente y existe una demostración autocontenida en `demo/assistant/index.html` que funciona mediante `file://` sin Flask. En modo offline las operaciones reales se deshabilitan de forma visible.
+- La API `/api/v1/assistant` permite consultar clases/cupos, rutina, progreso y membresía propios. Exige sesión, rol Cliente y `cliente.datos.ver`; no recibe un cliente arbitrario ni expone datos ajenos.
+- Inscripción y cancelación permanecen deshabilitadas: falta acordar elegibilidad de membresía y no existe servicio de cancelación. No se simulan ni persisten operaciones.
+- Edge aprobó nuevamente los 13 escenarios portables. La suite completa aprobó 129 pruebas en 95.357 segundos.
+- La arquitectura, modos de ejecución y límites están documentados en `docs/SMART_ASSISTANT.md`.
+
 ## Próximo paso
 
-El primer paso pendiente es completar la verificación real de M11 descrita a continuación. No declarar la autenticación integrada hasta que el servidor Flask efectivo sirva las rutas nuevas y el flujo sea comprobado en Chrome.
-
-## M11 — Pendiente de verificación real (2026-11-14)
-
-- Google Auth permitió autenticar la cuenta y vincularla al usuario FitPath ID 1, rol Cliente.
-- `GET /auth/me` devolvió `authenticated: true` para esa sesión.
-- La suite completa anterior informó 111 pruebas aprobadas.
-- Las últimas seis pruebas puntuales de integración de acceso al Cliente, navegación, autorización y logout aprobaron.
-- Se implementó `/auth/cliente`, las vistas Cliente protegidas por sesión y rol, y el logout POST con CSRF.
-- **Bloqueo real: `/auth/cliente` todavía devuelve HTTP 404 en el servidor `localhost:5000`.**
-- Se detectaron procesos Flask antiguos sin recarga automática; no se confirmó que el servidor efectivo utilice este checkout.
-- El acceso visual al dashboard Cliente y el logout real en Chrome todavía no están verificados.
-- La suite completa de 111 pruebas no se repitió tras la integración de las vistas Cliente; los cambios posteriores se validaron con las seis pruebas puntuales mencionadas.
-- M11 no debe declararse completamente terminada hasta resolver el 404 y completar la comprobación visual y de logout.
-
-### Recuperación al retomar
-
-1. Confirmar carpeta, intérprete y proceso que escucha el puerto 5000.
-2. Comparar `flask routes` con las rutas del servidor efectivo.
-3. Corregir exclusivamente la causa del 404.
-4. Probar el panel Cliente, el logout y que `/auth/me` devuelva 401 después del logout.
-5. Continuar con M12, AWS S3 y el asistente de IA.
+1. Definir la elegibilidad por membresía y el servicio transaccional de cancelación antes de habilitar mutaciones del asistente.
+2. Validar AWS S3 contra un bucket privado configurado antes de afirmar que la integración externa funciona.
+3. Para ejecutar todo FitPath sin Python, autorizar y probar un bloque separado de empaquetado Windows; la demostración estática ya es portable.

@@ -61,6 +61,11 @@ class BackendInfrastructureTests(unittest.TestCase):
                 "/templates/cliente/<path:filename>",
                 "/templates/landing.html",
                 "/statics/<path:filename>",
+                "/api/v1/assistant/capabilities",
+                "/api/v1/assistant/classes",
+                "/api/v1/assistant/routine",
+                "/api/v1/assistant/progress",
+                "/api/v1/assistant/membership",
             },
         )
         self.assertFalse(development_database.exists())
@@ -94,9 +99,10 @@ class BackendInfrastructureTests(unittest.TestCase):
 
     def test_new_backend_rejects_legacy_database_path(self):
         legacy_database = Path(__file__).resolve().parents[1] / "gimnasio.db"
+        existed_before = legacy_database.exists()
         with self.assertRaises(DatabaseConfigurationError):
             connect_database(legacy_database)
-        self.assertTrue(legacy_database.exists())
+        self.assertEqual(legacy_database.exists(), existed_before)
 
     def test_migration_runs_once_and_records_its_version(self):
         database = self.root / "migration" / "fitpath.sqlite3"

@@ -1,5 +1,6 @@
 import { initializeDrawer } from "./navigation-drawer.js";
 import { clienteDemo } from "../data/cliente-demo.js";
+import { initializeSmartAssistant } from "../assistant/loader.js";
 
 const routes = {
   inicio: "/templates/cliente/inicio/resumen.html",
@@ -275,3 +276,4 @@ async function initializeFitPathSession() {
 }
 
 initializeFitPathSession();
+initializeSmartAssistant().catch(() => {});

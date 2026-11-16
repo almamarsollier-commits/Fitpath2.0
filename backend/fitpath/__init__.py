@@ -25,6 +25,8 @@ def create_app(config_name=None, test_config=None):
     app.teardown_appcontext(close_db)
 
     from .auth import init_auth
+    from .api.v1 import init_api_v1
 
     init_auth(app)
+    init_api_v1(app)
     return app

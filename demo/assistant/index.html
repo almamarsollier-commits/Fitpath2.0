@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Demostración portable y sin conexión de FitPath Smart Assistant.">
+  <title>FitPath Smart Assistant | Demo portable</title>
+  <link rel="stylesheet" href="../../statics/css/fitpath.css">
+</head>
+<body class="fp-assistant-demo-page">
+  <main class="fp-assistant-demo">
+    <header class="fp-assistant-demo-header">
+      <a class="fp-brand" href="#" aria-label="FitPath 2.0">
+        <span class="fp-brand-mark">F</span><span class="fp-brand-word">FIT<span>PATH</span></span><span class="fp-brand-version">2.0</span>
+      </a>
+      <span class="fp-assistant-demo-badge">DEMO OFFLINE</span>
+    </header>
+    <section class="fp-assistant-demo-hero" aria-labelledby="demo-title">
+      <div>
+        <span class="fp-eyebrow"><span aria-hidden="true"></span> ASISTENTE PORTABLE</span>
+        <h1 id="demo-title">Orientación fitness.<br><span>Sin internet.</span></h1>
+        <p>Esta demostración funciona abriendo el archivo directamente. Responde consultas generales y distingue claramente las operaciones que requieren el backend real de FitPath.</p>
+      </div>
+      <aside class="fp-assistant-demo-note">
+        <strong>Modo informativo</strong>
+        <p>No registra reservas, no modifica datos y no simula operaciones reales.</p>
+      </aside>
+    </section>
+    <section class="fp-assistant-demo-topics" aria-label="Temas disponibles">
+      <article><span>01</span><strong>Entrenamiento</strong><p>Fuerza, hipertrofia, cardio, técnica y recuperación.</p></article>
+      <article><span>02</span><strong>Nutrición general</strong><p>Macronutrientes, hidratación, energía y hábitos.</p></article>
+      <article><span>03</span><strong>FitPath</strong><p>Navegación y estado claro de las funciones conectadas.</p></article>
+    </section>
+    <p class="fp-assistant-demo-hint">Abrí el asistente o usá las sugerencias para comenzar.</p>
+  </main>
+  <script src="../../statics/js/assistant/text-utils.js"></script>
+  <script src="../../statics/js/assistant/knowledge-base.js"></script>
+  <script src="../../statics/js/assistant/intent-engine.js"></script>
+  <script src="../../statics/js/assistant/fitpath-client.js"></script>
+  <script src="../../statics/js/assistant/conversation-engine.js"></script>
+  <script src="../../statics/js/assistant/widget.js"></script>
+  <script>
+    FitPathAssistant.mountWidget({ offline: true, expanded: true });
+  </script>
+</body>
+</html>

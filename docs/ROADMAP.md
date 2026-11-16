@@ -92,13 +92,13 @@ Todas las filas tienen prioridad **MVP aprobada**; no se establece un orden inte
 
 **Dependencias:** alcance de integración, autenticación y backend.
 
-## Bloque 6 — Agente de inteligencia artificial personalizado
+## Bloque 6 — FitPath Smart Assistant portable
 
-**Objetivo:** evaluar e incorporar el agente cuando su alcance futuro sea aprobado.
+**Objetivo:** incorporar orientación fitness general y acceso conversacional a funciones autorizadas mediante un motor JavaScript Vanilla local, sin modelos, servicios pagos ni conexión obligatoria.
 
-**Criterios de finalización:** funciones, datos y límites de actuación documentados antes de implementar; verificaciones asociadas a casos de uso aprobados; no se infieren acciones autónomas.
+**Criterios de finalización:** base de conocimientos y límites documentados; funcionamiento estático sin Flask; interfaz responsive; consultas reales protegidas por sesión, rol y propiedad; confirmación previa y reglas completas para cualquier mutación; pruebas de conversación, permisos y modo offline.
 
-**Dependencias:** aprobación del alcance futuro y disponibilidad de datos adecuados.
+**Dependencias:** APIs autorizadas para las operaciones reales. Las consultas generales y la demostración estática no dependen del backend.
 
 ## Criterio común de salida
 
