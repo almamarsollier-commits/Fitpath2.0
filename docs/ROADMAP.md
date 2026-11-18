@@ -65,6 +65,11 @@ Todas las filas tienen prioridad **MVP aprobada**; no se establece un orden inte
 
 **Dependencias:** cierre del Bloque 1 y revisión visual de los diagramas.
 
+**Avance 2026-11-18:** SQLite, migraciones 0001–0014 y APIs Flask por rol
+implementadas. La suite acumulada del clon actual terminó con 201 pruebas
+aprobadas. El análisis del SRS original sigue limitado porque sus PDF fuente no
+están en este clon.
+
 ## Bloque 3 — Autenticación y permisos
 
 **Objetivo:** implementar autenticación real y permisos por rol, incluida la integración prevista con Google OAuth.
@@ -76,6 +81,10 @@ Todas las filas tienen prioridad **MVP aprobada**; no se establece un orden inte
 
 **Dependencias:** Bloques 2 y decisiones de autenticación previas a este bloque.
 
+**Avance 2026-11-18:** autenticación Google, sesiones, autorización por permisos
+y vistas/endpoints de los cinco roles implementados. El equipo confirmó un
+flujo OIDC real; la suite actual cubre autorización y aislamiento por rol/sede.
+
 ## Bloque 4 — Almacenamiento AWS S3
 
 **Objetivo:** incorporar almacenamiento externo para los casos aprobados.
@@ -84,7 +93,7 @@ Todas las filas tienen prioridad **MVP aprobada**; no se establece un orden inte
 
 **Dependencias:** alcance de archivos, permisos, backend y autenticación.
 
-**Avance 2026-11-16:** implementada la imagen privada de perfil del Cliente, con persistencia de clave, autorización, validación y acceso temporal. Pendiente la prueba de conectividad contra el bucket AWS existente.
+**Avance 2026-11-16:** implementada la imagen privada de perfil del Cliente, con persistencia de clave, autorización, validación y acceso temporal. El equipo reportó satisfactoria la prueba real contra el bucket privado de desarrollo; no se repitió en esta revisión.
 
 ## Bloque 5 — Integraciones externas, incluido Google Calendar
 
@@ -95,6 +104,8 @@ Todas las filas tienen prioridad **MVP aprobada**; no se establece un orden inte
 **Dependencias:** alcance de integración, autenticación y backend.
 
 **Avance 2026-11-16:** implementado Checkout Pro de Mercado Pago en modo de prueba con intentos persistentes, consulta autoritativa, Webhooks firmados e idempotentes y actualización transaccional de deudas/membresías. Pendiente validar conectividad real con credenciales de prueba y una URL pública HTTPS.
+
+**Avance 2026-11-18:** implementada la autorización incremental de Google Calendar, separada del login, para que el Cliente añada explícitamente clases propias e inscriptas. Se persisten tokens cifrados e identificadores idempotentes por inscripción. El equipo reportó satisfactoria la conexión real y la creación de eventos; esta revisión no repitió la operación externa.
 
 ## Bloque 6 — FitPath Smart Assistant portable
 

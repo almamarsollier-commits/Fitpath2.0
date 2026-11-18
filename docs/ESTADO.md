@@ -149,9 +149,39 @@ Continúan pendientes: compatibilidad entre rol y perfil; elegibilidad por membr
 - Edge aprobó nuevamente los 13 escenarios portables. La suite completa aprobó 129 pruebas en 95.357 segundos.
 - La arquitectura, modos de ejecución y límites están documentados en `docs/SMART_ASSISTANT.md`.
 
+## Google Calendar — clases del Cliente (2026-11-18)
+
+- Se agregó autorización incremental sin modificar el login OIDC existente. La cuenta autorizante debe coincidir con la identidad Google vinculada al usuario FitPath.
+- El Cliente puede añadir únicamente una inscripción propia activa y programada, mediante botón, confirmación y POST protegido por CSRF.
+- El evento usa actividad, sede, dirección, inicio, fin y zona horaria persistidos. Un ID determinista de Google y `UNIQUE(inscripcion_id)` evitan duplicados incluso ante reintentos.
+- Los refresh tokens quedan cifrados por usuario; el frontend sólo recibe estados de configuración, autorización, éxito o error.
+- Las pruebas focalizadas cubren alcance incremental, vínculo de cuenta, cifrado, propiedad, CSRF, datos reales e idempotencia. La conexión real queda pendiente de la configuración detallada en `docs/GOOGLE_CALENDAR.md`.
+
 ## Próximo paso
 
 1. Validar AWS S3 contra el bucket privado existente antes de afirmar que la integración externa funciona.
 2. Configurar credenciales Mercado Pago de prueba y una URL HTTPS para ejecutar la demostración real de Checkout Pro y Webhooks.
 3. Autorizar, si se desea, la carga demo controlada sobre la SQLite de desarrollo.
 4. Definir la elegibilidad por membresía y el servicio transaccional de cancelación antes de habilitar mutaciones del asistente.
+5. Habilitar Google Calendar API, registrar alcance y callback, configurar el secreto de cifrado y ejecutar la prueba real de creación sin duplicados.
+
+## Actualización para estabilización de entrega (2026-11-18)
+
+Esta sección prevalece sobre los estados pendientes de validación externa
+registrados en las entradas históricas anteriores:
+
+- La suite completa del clon `Fitpath2.0-integracion` aprobó 201 pruebas. Se
+  cubren APIs de los cinco roles, autenticación, permisos y alcance por sede.
+- El equipo reporta pruebas reales satisfactorias de Google Auth, S3 y Google
+  Calendar. No se repitieron llamadas externas en esta revisión.
+- Mercado Pago continúa con pruebas simuladas; la validación del flujo
+  Checkout Pro/Webhooks en sandbox real sigue pendiente.
+- No se reprodujeron defectos funcionales que justifiquen cambios de código
+  durante esta revisión. La migración y los datos SQLite existentes no se
+  modificaron.
+- La validación independiente de JavaScript no se ejecutó porque Node.js no
+  está disponible en este entorno.
+- El PDF del Segundo Parcial tiene cuatro páginas, pero no se pudo extraer su
+  texto aquí; requiere cotejo manual con el alcance actual y los diagramas.
+- La guía de APIs y las instrucciones de Google Auth se actualizaron para
+  reflejar el backend y la ruta `.venv` de este clon.

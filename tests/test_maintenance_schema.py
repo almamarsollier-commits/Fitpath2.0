@@ -14,7 +14,7 @@ from backend.fitpath.seeds import seed_initial_roles
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS_DIR = REPOSITORY_ROOT / "backend" / "fitpath" / "migrations"
-MIGRATION_VERSIONS = tuple(range(1, 13))
+MIGRATION_VERSIONS = tuple(range(1, 15))
 
 
 class MaintenanceSchemaTests(unittest.TestCase):
@@ -304,7 +304,7 @@ class MaintenanceSchemaTests(unittest.TestCase):
         self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), ())
         self.assertEqual(
             self.connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0],
-            12,
+            14,
         )
         copied_migrations = self.root / "checksum-migrations"
         copied_migrations.mkdir()

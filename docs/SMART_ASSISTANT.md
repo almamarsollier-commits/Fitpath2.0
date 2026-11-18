@@ -50,9 +50,9 @@ reservas ficticias.
 Desde la raíz del repositorio, en la computadora preparada:
 
 ```powershell
-& ".\Fithpad2.0\.venv\Scripts\python.exe" -m backend.seed --environment development
+& ".\.venv\Scripts\python.exe" -m backend.seed --environment development
 $env:FLASK_APP = "backend.fitpath:create_app"
-& ".\Fithpad2.0\.venv\Scripts\python.exe" -m flask run
+& ".\.venv\Scripts\python.exe" -m flask run
 ```
 
 Copiar la carpeta a una PC sin Python no permite ejecutar Flask ni SQLite a
@@ -63,7 +63,9 @@ una PC limpia; no se considera preparado ni verificado todavía.
 
 ## Verificación
 
-- `python -m unittest discover -s tests -v`: 126 pruebas aprobadas.
-- Prueba `file://` en Edge: 13 escenarios aprobados.
+- `python -m unittest discover -s tests -v`: 201 pruebas aprobadas el
+  2026-11-18.
+- Prueba `file://` en Edge: 13 escenarios aprobados según la validación
+  reportada el 2026-11-15.
 - La API tiene pruebas de sesión, rol, permiso, datos propios, cupos y ausencia
   de mutaciones no validadas.

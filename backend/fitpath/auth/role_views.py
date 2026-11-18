@@ -63,6 +63,18 @@ def trainer_home():
     )
 
 
+@role_views_blueprint.get("/auth/entrenador/rutinas")
+@require_access(roles=("Entrenador",), permission=TRAINER_VIEWS_PERMISSION)
+def trainer_routines():
+    return render_template("auth/trainer_routines.html")
+
+
+@role_views_blueprint.get("/auth/entrenador/asistencias")
+@require_access(roles=("Entrenador",), permission=TRAINER_VIEWS_PERMISSION)
+def trainer_attendance():
+    return render_template("auth/trainer_attendance.html")
+
+
 @role_views_blueprint.get("/auth/jefe-sede")
 @require_access(roles=("Jefe de sede",), permission=MANAGER_VIEWS_PERMISSION)
 def manager_home():

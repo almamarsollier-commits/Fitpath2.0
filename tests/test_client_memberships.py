@@ -12,6 +12,11 @@ from backend.fitpath.seeds import (
 )
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+PAYMENTS_SCRIPT = REPOSITORY_ROOT / "statics" / "js" / "modules" / "payments.js"
+MEMBERSHIP_VIEW = REPOSITORY_ROOT / "templates" / "cliente" / "perfil" / "membresia.html"
+
+
 class ClientMembershipTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
@@ -103,6 +108,45 @@ class ClientMembershipTests(unittest.TestCase):
         )
         self.assertEqual(blocked.status_code, 409)
         self.assertEqual(blocked.json["error"], "active_membership_exists")
+
+        history = self.client.get("/api/v1/client/memberships")
+        self.assertEqual(history.status_code, 200)
+        self.assertEqual(history.json["active"]["membresia_id"], self.free_id)
+        self.assertEqual(
+            [item["estado"] for item in history.json["subscriptions"]],
+            ["activa", "vencida"],
+        )
+        self.assertEqual(
+            {item["membresia_id"] for item in history.json["subscriptions"]},
+            {self.paid_id, self.free_id},
+        )
+        debt_after_history = self.db.execute(
+            "SELECT importe_unidades_menores, estado FROM deudas WHERE id_deuda = ?",
+            (debt_id,),
+        ).fetchone()
+        self.assertEqual(tuple(debt_after_history), (250000, "pendiente"))
+
+        with self.client.session_transaction() as session:
+            session.clear()
+        unauthorized = self.client.get("/api/v1/client/memberships")
+        self.assertEqual(unauthorized.status_code, 401)
+
+    def test_membership_view_connects_catalog_history_debts_and_test_checkout(self):
+        script = PAYMENTS_SCRIPT.read_text(encoding="utf-8")
+        view = MEMBERSHIP_VIEW.read_text(encoding="utf-8")
+        for marker in (
+            "data-membership-catalog",
+            "data-membership-history",
+            "data-payment-debts",
+            "data-payment-history",
+            "data-payment-status",
+        ):
+            self.assertIn(marker, view)
+        self.assertIn('fetch("/api/v1/client/payments"', script)
+        self.assertIn('fetch("/api/v1/client/memberships"', script)
+        self.assertIn('fetch("/api/v1/client/payment-intents"', script)
+        self.assertIn('"X-CSRF-Token": csrfToken', script)
+        self.assertIn("button.disabled = !checkoutAvailable", script)
 
 
 if __name__ == "__main__":

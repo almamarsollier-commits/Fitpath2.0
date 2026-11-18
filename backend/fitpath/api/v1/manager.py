@@ -8,6 +8,11 @@ from flask import Blueprint, current_app, jsonify, request
 from ...auth.authorization import current_identity, require_api_access
 from ...database import get_db
 from ...permissions import MANAGER_DATA_PERMISSION
+from ...services.schedules import (
+    ScheduleValidationError,
+    parse_utc_datetime,
+    validate_trainer_schedule,
+)
 from .role_utils import (
     bounded_integer,
     clean_text,
@@ -58,6 +63,11 @@ def _dashboard_payload(site_id):
         for row in connection.execute(
             """
             SELECT DISTINCT u.id_usuario AS id, u.nombre, u.apellido, r.nombre AS rol,
+                   u.email, u.telefono,
+                   CASE WHEN r.nombre = 'Entrenador' THEN (
+                     SELECT e.especialidad FROM entrenadores e
+                     WHERE e.usuario_id = u.id_usuario
+                   ) END AS especialidad,
                    CASE WHEN r.nombre = 'Entrenador' THEN COALESCE((
                      SELECT es.activo FROM entrenadores e
                      JOIN entrenador_sede es ON es.entrenador_id = e.id_entrenador
@@ -79,8 +89,14 @@ def _dashboard_payload(site_id):
             (site_id, site_id, site_id, site_id),
         ).fetchall()
     ]
+    for member in personnel:
+        member["vinculo_activo"] = bool(member["vinculo_activo"])
     activities = [
-        dict(row)
+        {
+            "id": row["id"],
+            "nombre": row["nombre"],
+            "habilitada": bool(row["habilitada"]),
+        }
         for row in connection.execute(
             """
             SELECT a.id_actividad AS id, a.nombre, ast.habilitada
@@ -95,7 +111,8 @@ def _dashboard_payload(site_id):
         dict(row)
         for row in connection.execute(
             """
-            SELECT c.id_clase AS id, a.nombre AS actividad,
+            SELECT c.id_clase AS id, c.actividad_id, c.entrenador_id,
+                   a.nombre AS actividad,
                    u.nombre || ' ' || u.apellido AS entrenador,
                    c.inicio_utc, c.fin_utc, c.cupo_maximo, c.estado,
                    (SELECT count(*) FROM inscripciones i
@@ -105,6 +122,68 @@ def _dashboard_payload(site_id):
             JOIN entrenadores e ON e.id_entrenador = c.entrenador_id
             JOIN usuarios u ON u.id_usuario = e.usuario_id
             WHERE c.sede_id = ? ORDER BY c.inicio_utc DESC LIMIT 100
+            """,
+            (site_id,),
+        ).fetchall()
+    ]
+    availability = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT d.id_disponibilidad AS id, d.entrenador_id,
+                   u.nombre || ' ' || u.apellido AS entrenador,
+                   d.dia_semana, d.hora_inicio, d.hora_fin,
+                   es.activo AS vinculo_activo
+            FROM disponibilidad_entrenador d
+            JOIN entrenadores e ON e.id_entrenador = d.entrenador_id
+            JOIN usuarios u ON u.id_usuario = e.usuario_id
+            JOIN entrenador_sede es
+              ON es.entrenador_id = d.entrenador_id AND es.sede_id = d.sede_id
+            WHERE d.sede_id = ?
+            ORDER BY u.apellido, u.nombre, d.dia_semana, d.hora_inicio
+            """,
+            (site_id,),
+        ).fetchall()
+    ]
+    for schedule in availability:
+        schedule["vinculo_activo"] = bool(schedule["vinculo_activo"])
+    enrollments = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT i.id_inscripcion AS id, c.id_clase AS clase_id,
+                   a.nombre AS actividad, c.inicio_utc,
+                   u.nombre || ' ' || u.apellido AS cliente,
+                   i.fecha_utc AS inscripta_utc, i.estado,
+                   COALESCE(ast.estado, 'sin_registrar') AS asistencia
+            FROM inscripciones i
+            JOIN clientes cl ON cl.id_cliente = i.cliente_id
+            JOIN usuarios u ON u.id_usuario = cl.usuario_id
+            JOIN clases c ON c.id_clase = i.clase_id
+            JOIN actividades a ON a.id_actividad = c.actividad_id
+            LEFT JOIN asistencias ast ON ast.inscripcion_id = i.id_inscripcion
+            WHERE c.sede_id = ?
+            ORDER BY c.inicio_utc DESC, u.apellido, u.nombre
+            """,
+            (site_id,),
+        ).fetchall()
+    ]
+    remuneration = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT r.id_remuneracion AS id, c.id_clase AS clase_id,
+                   a.nombre AS actividad, c.inicio_utc,
+                   u.nombre || ' ' || u.apellido AS entrenador,
+                   r.importe_unidades_menores, r.moneda,
+                   r.estado_liquidacion, r.liquidada_utc
+            FROM remuneraciones r
+            JOIN clases c ON c.id_clase = r.clase_id
+            JOIN actividades a ON a.id_actividad = c.actividad_id
+            JOIN entrenadores e ON e.id_entrenador = c.entrenador_id
+            JOIN usuarios u ON u.id_usuario = e.usuario_id
+            WHERE c.sede_id = ?
+            ORDER BY c.inicio_utc DESC, r.id_remuneracion DESC
             """,
             (site_id,),
         ).fetchall()
@@ -133,8 +212,16 @@ def _dashboard_payload(site_id):
             {"title": "Personal de la sede", "rows": personnel},
             {"title": "Actividades", "rows": activities},
             {"title": "Horarios y cupos", "rows": classes},
+            {"title": "Inscripciones", "rows": enrollments},
+            {"title": "Disponibilidad del personal", "rows": availability},
+            {"title": "Remuneraciones", "rows": remuneration},
         ],
-        "options": {"activities": activities, "trainers": trainers},
+        "options": {
+            "activities": activities,
+            "trainers": trainers,
+            "classes": classes,
+            "personnel": personnel,
+        },
     }
 
 
@@ -273,6 +360,10 @@ def _class_values(payload, *, partial=False):
             value = clean_text(payload[key], key, maximum=20)
             if not UTC_PATTERN.fullmatch(value):
                 raise ValueError(key)
+            try:
+                parse_utc_datetime(value)
+            except ValueError as error:
+                raise ValueError(key) from error
             values[key] = value
     if "estado" in payload:
         if payload["estado"] not in {"programada", "cancelada", "realizada"}:
@@ -299,6 +390,14 @@ def create_site_class():
         return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
     connection = get_db()
     try:
+        connection.execute("BEGIN IMMEDIATE")
+        validate_trainer_schedule(
+            connection,
+            trainer_id=values["entrenador_id"],
+            site_id=profile["sede_id"],
+            start_utc=values["inicio_utc"],
+            end_utc=values["fin_utc"],
+        )
         cursor = connection.execute(
             """
             INSERT INTO clases
@@ -313,6 +412,9 @@ def create_site_class():
             ),
         )
         connection.commit()
+    except ScheduleValidationError as validation_error:
+        connection.rollback()
+        return jsonify({"error": validation_error.code}), 409
     except sqlite3.IntegrityError:
         connection.rollback()
         return jsonify({"error": "class_relationship_conflict"}), 409
@@ -332,30 +434,50 @@ def update_site_class(class_id):
     except ValueError as validation_error:
         return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
     connection = get_db()
-    current = connection.execute(
-        "SELECT * FROM clases WHERE id_clase = ? AND sede_id = ?",
-        (class_id, profile["sede_id"]),
-    ).fetchone()
-    if current is None:
-        return jsonify({"error": "class_not_found"}), 404
-    start = values.get("inicio_utc", current["inicio_utc"])
-    end = values.get("fin_utc", current["fin_utc"])
-    if end <= start:
-        return jsonify({"error": "invalid_request", "field": "horario"}), 400
-    if "cupo_maximo" in values:
-        occupied = connection.execute(
-            "SELECT count(*) FROM inscripciones WHERE clase_id = ? AND estado = 'activa'",
-            (class_id,),
-        ).fetchone()[0]
-        if values["cupo_maximo"] < occupied:
-            return jsonify({"error": "capacity_below_enrollments"}), 409
-    assignments = ", ".join(f"{field} = ?" for field in values)
     try:
+        connection.execute("BEGIN IMMEDIATE")
+        current = connection.execute(
+            "SELECT * FROM clases WHERE id_clase = ? AND sede_id = ?",
+            (class_id, profile["sede_id"]),
+        ).fetchone()
+        if current is None:
+            connection.rollback()
+            return jsonify({"error": "class_not_found"}), 404
+        start = values.get("inicio_utc", current["inicio_utc"])
+        end = values.get("fin_utc", current["fin_utc"])
+        if end <= start:
+            connection.rollback()
+            return jsonify({"error": "invalid_request", "field": "horario"}), 400
+        if "cupo_maximo" in values:
+            occupied = connection.execute(
+                "SELECT count(*) FROM inscripciones WHERE clase_id = ? AND estado = 'activa'",
+                (class_id,),
+            ).fetchone()[0]
+            if values["cupo_maximo"] < occupied:
+                connection.rollback()
+                return jsonify({"error": "capacity_below_enrollments"}), 409
+        final_state = values.get("estado", current["estado"])
+        schedule_changed = bool(
+            {"entrenador_id", "inicio_utc", "fin_utc"}.intersection(values)
+        ) or (current["estado"] == "cancelada" and final_state != "cancelada")
+        if final_state != "cancelada" and schedule_changed:
+            validate_trainer_schedule(
+                connection,
+                trainer_id=values.get("entrenador_id", current["entrenador_id"]),
+                site_id=profile["sede_id"],
+                start_utc=start,
+                end_utc=end,
+                exclude_class_id=class_id,
+            )
+        assignments = ", ".join(f"{field} = ?" for field in values)
         connection.execute(
             f"UPDATE clases SET {assignments} WHERE id_clase = ? AND sede_id = ?",
             (*values.values(), class_id, profile["sede_id"]),
         )
         connection.commit()
+    except ScheduleValidationError as validation_error:
+        connection.rollback()
+        return jsonify({"error": validation_error.code}), 409
     except sqlite3.IntegrityError:
         connection.rollback()
         return jsonify({"error": "class_relationship_conflict"}), 409

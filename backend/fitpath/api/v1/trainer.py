@@ -8,6 +8,8 @@ from flask import Blueprint, current_app, jsonify, request
 from ...auth.authorization import current_identity, require_api_access
 from ...database import get_db
 from ...permissions import TRAINER_DATA_PERMISSION
+from ...services.nutrition import get_nutrition_plan, list_nutrition_plans
+from ...services.schedules import ScheduleValidationError, trainer_is_available
 from .role_utils import (
     bounded_integer,
     clean_text,
@@ -61,6 +63,7 @@ def _authorized_client(connection, trainer_id, client_id):
 
 def _dashboard_payload(trainer_id):
     connection = get_db()
+    now = utc_now()
     classes = [
         dict(row)
         for row in connection.execute(
@@ -100,19 +103,24 @@ def _dashboard_payload(trainer_id):
         for row in connection.execute(
             """
             SELECT r.id_rutina AS id, r.nombre, r.descripcion,
-                   r.fecha_creacion_utc, r.cliente_id,
+                   r.fecha_creacion_utc, r.cliente_id, r.objetivo_id,
+                   r.observaciones_entrenador AS observaciones, r.activa,
+                   o.nombre AS objetivo,
                    u.nombre || ' ' || u.apellido AS cliente,
                    (SELECT count(*) FROM rutina_ejercicio re
                     WHERE re.rutina_id = r.id_rutina) AS ejercicios
             FROM rutinas r
             JOIN clientes cl ON cl.id_cliente = r.cliente_id
             JOIN usuarios u ON u.id_usuario = cl.usuario_id
+            LEFT JOIN objetivos o ON o.id_objetivo = r.objetivo_id
             WHERE r.entrenador_id = ?
             ORDER BY r.fecha_creacion_utc DESC, r.id_rutina DESC
             """,
             (trainer_id,),
         ).fetchall()
     ]
+    for routine in routines:
+        routine["activa"] = bool(routine["activa"])
     availability = [
         dict(row)
         for row in connection.execute(
@@ -134,6 +142,48 @@ def _dashboard_payload(trainer_id):
             SELECT id_ejercicio AS id, nombre, grupo_muscular, descripcion
             FROM ejercicios ORDER BY nombre, id_ejercicio
             """
+        ).fetchall()
+    ]
+    routine_exercises = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT re.id_rutina_ejercicio AS id, re.rutina_id, re.ejercicio_id,
+                   r.nombre AS rutina, e.nombre AS ejercicio,
+                   re.orden, re.series, re.repeticiones,
+                   re.peso_gramos, re.descanso_segundos,
+                   r.activa AS rutina_activa
+            FROM rutina_ejercicio re
+            JOIN rutinas r ON r.id_rutina = re.rutina_id
+            JOIN ejercicios e ON e.id_ejercicio = re.ejercicio_id
+            WHERE r.entrenador_id = ?
+            ORDER BY r.nombre, re.orden, re.id_rutina_ejercicio
+            """,
+            (trainer_id,),
+        ).fetchall()
+    ]
+    for assignment in routine_exercises:
+        assignment["rutina_activa"] = bool(assignment["rutina_activa"])
+    objectives = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT co.cliente_id, o.id_objetivo AS id, o.nombre,
+                   t.nombre AS tipo,
+                   u.nombre || ' ' || u.apellido AS cliente
+            FROM cliente_objetivo co
+            JOIN objetivos o ON o.id_objetivo = co.objetivo_id
+            JOIN tipos_objetivo t ON t.id_tipo_objetivo = o.tipo_objetivo_id
+            JOIN clientes cl ON cl.id_cliente = co.cliente_id
+            JOIN usuarios u ON u.id_usuario = cl.usuario_id
+            WHERE EXISTS (
+              SELECT 1 FROM inscripciones i
+              JOIN clases c ON c.id_clase = i.clase_id
+              WHERE i.cliente_id = co.cliente_id AND c.entrenador_id = ?
+            )
+            ORDER BY u.apellido, u.nombre, t.nombre, o.nombre
+            """,
+            (trainer_id,),
         ).fetchall()
     ]
     sites = [
@@ -169,22 +219,31 @@ def _dashboard_payload(trainer_id):
         dict(row)
         for row in connection.execute(
             """
-            SELECT i.id_inscripcion AS id,
+            SELECT i.id_inscripcion AS id, c.id_clase AS clase_id,
                    u.nombre || ' ' || u.apellido AS alumno,
-                   a.nombre AS actividad, c.inicio_utc,
+                   a.nombre AS actividad, s.nombre AS sede,
+                   c.inicio_utc, c.fin_utc,
+                    c.estado AS clase_estado,
+                    CASE
+                      WHEN c.estado <> 'cancelada' AND c.inicio_utc <= ? THEN 1
+                      ELSE 0
+                    END AS puede_registrar,
                    COALESCE(ast.estado, 'sin_registrar') AS asistencia
             FROM inscripciones i
             JOIN clientes cl ON cl.id_cliente = i.cliente_id
             JOIN usuarios u ON u.id_usuario = cl.usuario_id
             JOIN clases c ON c.id_clase = i.clase_id
             JOIN actividades a ON a.id_actividad = c.actividad_id
+            JOIN sedes s ON s.id_sede = c.sede_id
             LEFT JOIN asistencias ast ON ast.inscripcion_id = i.id_inscripcion
             WHERE c.entrenador_id = ? AND i.estado = 'activa'
             ORDER BY c.inicio_utc DESC, u.apellido, u.nombre
             """,
-            (trainer_id,),
+            (now, trainer_id),
         ).fetchall()
     ]
+    for enrollment in enrollments:
+        enrollment["puede_registrar"] = bool(enrollment["puede_registrar"])
     return {
         "metrics": [
             {"label": "Clases asignadas", "value": len(classes)},
@@ -195,17 +254,25 @@ def _dashboard_payload(trainer_id):
             {"title": "Clases asignadas", "rows": classes},
             {"title": "Alumnos autorizados", "rows": students},
             {"title": "Rutinas", "rows": routines},
+            {"title": "Ejercicios de rutinas", "rows": routine_exercises},
             {"title": "Ejercicios", "rows": exercises},
             {"title": "Disponibilidad", "rows": availability},
             {"title": "Asistencias", "rows": enrollments},
             {"title": "Remuneraciones", "rows": remuneration},
         ],
         "options": {
+            "classes": classes,
             "students": students,
             "sites": sites,
             "enrollments": enrollments,
+            "attendance_enrollments": [
+                enrollment for enrollment in enrollments
+                if enrollment["puede_registrar"]
+            ],
             "routines": routines,
             "exercises": exercises,
+            "routine_exercises": routine_exercises,
+            "objectives": objectives,
         },
     }
 
@@ -217,6 +284,37 @@ def trainer_dashboard():
     if error:
         return error
     return jsonify(_dashboard_payload(profile["id_entrenador"]))
+
+
+def _nutrition_client_or_error(client_id):
+    profile, error = _profile_or_error()
+    if error:
+        return None, error
+    if not _authorized_client(get_db(), profile["id_entrenador"], client_id):
+        return None, (jsonify({"error": "student_not_authorized"}), 403)
+    return client_id, None
+
+
+@trainer_api_blueprint.get("/clients/<int:client_id>/nutrition-plans")
+@trainer_required
+def get_client_nutrition_plans(client_id):
+    authorized_client_id, error = _nutrition_client_or_error(client_id)
+    if error:
+        return error
+    plans = list_nutrition_plans(get_db(), authorized_client_id)
+    return jsonify({"nutrition_plans": plans})
+
+
+@trainer_api_blueprint.get("/clients/<int:client_id>/nutrition-plans/<int:plan_id>")
+@trainer_required
+def get_client_nutrition_plan(client_id, plan_id):
+    authorized_client_id, error = _nutrition_client_or_error(client_id)
+    if error:
+        return error
+    plan = get_nutrition_plan(get_db(), authorized_client_id, plan_id)
+    if plan is None:
+        return jsonify({"error": "nutrition_plan_not_found"}), 404
+    return jsonify({"nutrition_plan": plan})
 
 
 @trainer_api_blueprint.post("/routines")
@@ -289,7 +387,7 @@ def update_routine(routine_id):
         return error
     payload = request.get_json(silent=True)
     try:
-        require_json_fields(payload, {"nombre", "descripcion", "observaciones"})
+        require_json_fields(payload, {"nombre", "descripcion", "objetivo_id", "observaciones"})
         if not payload:
             raise ValueError("request")
         values = {}
@@ -299,14 +397,28 @@ def update_routine(routine_id):
             values["descripcion"] = clean_text(payload["descripcion"], "descripcion", maximum=1000, optional=True)
         if "observaciones" in payload:
             values["observaciones_entrenador"] = clean_text(payload["observaciones"], "observaciones", maximum=1000, optional=True)
+        if "objetivo_id" in payload:
+            objective_id = payload["objetivo_id"]
+            if objective_id is not None:
+                objective_id = positive_integer(objective_id, "objetivo_id")
+            values["objetivo_id"] = objective_id
     except ValueError as validation_error:
         return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
     connection = get_db()
-    if connection.execute(
-        "SELECT 1 FROM rutinas WHERE id_rutina = ? AND entrenador_id = ?",
+    routine = connection.execute(
+        """
+        SELECT cliente_id FROM rutinas
+        WHERE id_rutina = ? AND entrenador_id = ? AND activa = 1
+        """,
         (routine_id, profile["id_entrenador"]),
-    ).fetchone() is None:
+    ).fetchone()
+    if routine is None:
         return jsonify({"error": "routine_not_found"}), 404
+    if values.get("objetivo_id") is not None and connection.execute(
+        "SELECT 1 FROM cliente_objetivo WHERE cliente_id = ? AND objetivo_id = ?",
+        (routine["cliente_id"], values["objetivo_id"]),
+    ).fetchone() is None:
+        return jsonify({"error": "objective_not_assigned_to_client"}), 409
     assignments = ", ".join(f"{field} = ?" for field in values)
     connection.execute(
         f"UPDATE rutinas SET {assignments} WHERE id_rutina = ?",
@@ -314,6 +426,28 @@ def update_routine(routine_id):
     )
     connection.commit()
     return jsonify({"routine": {"id": routine_id, **values}})
+
+
+@trainer_api_blueprint.delete("/routines/<int:routine_id>")
+@trainer_required
+def deactivate_routine(routine_id):
+    if not csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    profile, error = _profile_or_error()
+    if error:
+        return error
+    connection = get_db()
+    cursor = connection.execute(
+        """
+        UPDATE rutinas SET activa = 0
+        WHERE id_rutina = ? AND entrenador_id = ? AND activa = 1
+        """,
+        (routine_id, profile["id_entrenador"]),
+    )
+    connection.commit()
+    if cursor.rowcount != 1:
+        return jsonify({"error": "routine_not_found"}), 404
+    return jsonify({"routine": {"id": routine_id, "active": False}})
 
 
 @trainer_api_blueprint.post("/exercises")
@@ -400,7 +534,10 @@ def add_routine_exercise(routine_id):
         return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
     connection = get_db()
     if connection.execute(
-        "SELECT 1 FROM rutinas WHERE id_rutina = ? AND entrenador_id = ?",
+        """
+        SELECT 1 FROM rutinas
+        WHERE id_rutina = ? AND entrenador_id = ? AND activa = 1
+        """,
         (routine_id, profile["id_entrenador"]),
     ).fetchone() is None:
         return jsonify({"error": "routine_not_found"}), 404
@@ -419,6 +556,151 @@ def add_routine_exercise(routine_id):
         connection.rollback()
         return jsonify({"error": "exercise_assignment_conflict"}), 409
     return jsonify({"routine_exercise": {"id": cursor.lastrowid}}), 201
+
+
+def _routine_exercise_values(payload):
+    require_json_fields(
+        payload,
+        {"orden", "series", "repeticiones", "peso_gramos", "descanso_segundos"},
+    )
+    if not payload:
+        raise ValueError("request")
+    values = {}
+    limits = {
+        "orden": (1, 100),
+        "series": (1, 100),
+        "repeticiones": (1, 1000),
+        "descanso_segundos": (0, 3600),
+    }
+    for field, (minimum, maximum) in limits.items():
+        if field in payload:
+            values[field] = bounded_integer(payload[field], field, minimum, maximum)
+    if "peso_gramos" in payload:
+        weight = payload["peso_gramos"]
+        values["peso_gramos"] = (
+            None
+            if weight is None
+            else bounded_integer(weight, "peso_gramos", 0, 2_000_000)
+        )
+    return values
+
+
+def _normalize_routine_order(connection, routine_id, ordered_ids):
+    connection.execute(
+        "UPDATE rutina_ejercicio SET orden = orden + 1000000 WHERE rutina_id = ?",
+        (routine_id,),
+    )
+    connection.executemany(
+        "UPDATE rutina_ejercicio SET orden = ? WHERE id_rutina_ejercicio = ?",
+        ((order, assignment_id) for order, assignment_id in enumerate(ordered_ids, 1)),
+    )
+
+
+@trainer_api_blueprint.patch(
+    "/routines/<int:routine_id>/exercises/<int:assignment_id>"
+)
+@trainer_required
+def update_routine_exercise(routine_id, assignment_id):
+    if not csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    profile, error = _profile_or_error()
+    if error:
+        return error
+    try:
+        values = _routine_exercise_values(request.get_json(silent=True))
+    except ValueError as validation_error:
+        return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
+    connection = get_db()
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        assignment = connection.execute(
+            """
+            SELECT re.id_rutina_ejercicio
+            FROM rutina_ejercicio re
+            JOIN rutinas r ON r.id_rutina = re.rutina_id
+            WHERE re.id_rutina_ejercicio = ? AND re.rutina_id = ?
+              AND r.entrenador_id = ? AND r.activa = 1
+            """,
+            (assignment_id, routine_id, profile["id_entrenador"]),
+        ).fetchone()
+        if assignment is None:
+            connection.rollback()
+            return jsonify({"error": "routine_exercise_not_found"}), 404
+        if "orden" in values:
+            ordered_ids = [
+                row["id_rutina_ejercicio"]
+                for row in connection.execute(
+                    """
+                    SELECT id_rutina_ejercicio FROM rutina_ejercicio
+                    WHERE rutina_id = ? ORDER BY orden, id_rutina_ejercicio
+                    """,
+                    (routine_id,),
+                ).fetchall()
+            ]
+            if values["orden"] > len(ordered_ids):
+                connection.rollback()
+                return jsonify({"error": "invalid_request", "field": "orden"}), 400
+            ordered_ids.remove(assignment_id)
+            ordered_ids.insert(values["orden"] - 1, assignment_id)
+            _normalize_routine_order(connection, routine_id, ordered_ids)
+        updates = {key: value for key, value in values.items() if key != "orden"}
+        if updates:
+            assignments = ", ".join(f"{field} = ?" for field in updates)
+            connection.execute(
+                f"UPDATE rutina_ejercicio SET {assignments} WHERE id_rutina_ejercicio = ?",
+                (*updates.values(), assignment_id),
+            )
+        connection.commit()
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return jsonify({"error": "exercise_assignment_conflict"}), 409
+    return jsonify({"routine_exercise": {"id": assignment_id, **values}})
+
+
+@trainer_api_blueprint.delete(
+    "/routines/<int:routine_id>/exercises/<int:assignment_id>"
+)
+@trainer_required
+def delete_routine_exercise(routine_id, assignment_id):
+    if not csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    profile, error = _profile_or_error()
+    if error:
+        return error
+    connection = get_db()
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        cursor = connection.execute(
+            """
+            DELETE FROM rutina_ejercicio
+            WHERE id_rutina_ejercicio = ? AND rutina_id = ?
+              AND EXISTS (
+                SELECT 1 FROM rutinas r
+                WHERE r.id_rutina = rutina_ejercicio.rutina_id
+                  AND r.entrenador_id = ? AND r.activa = 1
+              )
+            """,
+            (assignment_id, routine_id, profile["id_entrenador"]),
+        )
+        if cursor.rowcount != 1:
+            connection.rollback()
+            return jsonify({"error": "routine_exercise_not_found"}), 404
+        remaining_ids = [
+            row["id_rutina_ejercicio"]
+            for row in connection.execute(
+                """
+                SELECT id_rutina_ejercicio FROM rutina_ejercicio
+                WHERE rutina_id = ? ORDER BY orden, id_rutina_ejercicio
+                """,
+                (routine_id,),
+            ).fetchall()
+        ]
+        _normalize_routine_order(connection, routine_id, remaining_ids)
+        connection.commit()
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return jsonify({"error": "exercise_assignment_conflict"}), 409
+    return jsonify({"deleted": True})
 
 
 @trainer_api_blueprint.post("/attendance")
@@ -441,7 +723,7 @@ def record_attendance():
     connection = get_db()
     enrollment = connection.execute(
         """
-        SELECT i.id_inscripcion, c.inicio_utc
+        SELECT i.id_inscripcion, c.inicio_utc, c.estado AS clase_estado
         FROM inscripciones i
         JOIN clases c ON c.id_clase = i.clase_id
         WHERE i.id_inscripcion = ? AND i.estado = 'activa'
@@ -451,6 +733,8 @@ def record_attendance():
     ).fetchone()
     if enrollment is None:
         return jsonify({"error": "enrollment_not_authorized"}), 404
+    if enrollment["clase_estado"] == "cancelada":
+        return jsonify({"error": "attendance_class_cancelled"}), 409
     if enrollment["inicio_utc"] > utc_now():
         return jsonify({"error": "attendance_too_early"}), 409
     connection.execute(
@@ -516,11 +800,48 @@ def delete_availability(availability_id):
     if error:
         return error
     connection = get_db()
-    cursor = connection.execute(
-        "DELETE FROM disponibilidad_entrenador WHERE id_disponibilidad = ? AND entrenador_id = ?",
-        (availability_id, profile["id_entrenador"]),
-    )
-    connection.commit()
-    if cursor.rowcount != 1:
-        return jsonify({"error": "availability_not_found"}), 404
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        availability = connection.execute(
+            """
+            SELECT id_disponibilidad, sede_id
+            FROM disponibilidad_entrenador
+            WHERE id_disponibilidad = ? AND entrenador_id = ?
+            """,
+            (availability_id, profile["id_entrenador"]),
+        ).fetchone()
+        if availability is None:
+            connection.rollback()
+            return jsonify({"error": "availability_not_found"}), 404
+        scheduled_classes = connection.execute(
+            """
+            SELECT inicio_utc, fin_utc
+            FROM clases
+            WHERE entrenador_id = ? AND sede_id = ?
+              AND estado = 'programada' AND fin_utc > ?
+            """,
+            (profile["id_entrenador"], availability["sede_id"], utc_now()),
+        ).fetchall()
+        for scheduled_class in scheduled_classes:
+            schedule = {
+                "trainer_id": profile["id_entrenador"],
+                "site_id": availability["sede_id"],
+                "start_utc": scheduled_class["inicio_utc"],
+                "end_utc": scheduled_class["fin_utc"],
+            }
+            if trainer_is_available(connection, **schedule) and not trainer_is_available(
+                connection,
+                **schedule,
+                exclude_availability_id=availability_id,
+            ):
+                connection.rollback()
+                return jsonify({"error": "availability_has_scheduled_classes"}), 409
+        connection.execute(
+            "DELETE FROM disponibilidad_entrenador WHERE id_disponibilidad = ?",
+            (availability_id,),
+        )
+        connection.commit()
+    except ScheduleValidationError as validation_error:
+        connection.rollback()
+        return jsonify({"error": validation_error.code}), 409
     return jsonify({"deleted": True})

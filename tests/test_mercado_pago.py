@@ -161,7 +161,7 @@ class PaymentsApiTests(unittest.TestCase):
         self.addCleanup(self.db.close)
         self.assertEqual(
             apply_migrations(self.db, self.app.config["MIGRATIONS_DIR"]),
-            tuple(range(1, 13)),
+            tuple(range(1, 15)),
         )
         seed_initial_roles(self.db)
         seed_initial_permissions(self.db)

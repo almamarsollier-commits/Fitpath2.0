@@ -1,6 +1,11 @@
 # AWS S3 — imágenes privadas de perfil
 
-## Estado verificado
+## Estado de validación
+
+El equipo reportó una prueba real satisfactoria de carga, lectura privada,
+reemplazo y eliminación contra el bucket de desarrollo. Esta revisión no
+repitió llamadas a AWS; las pruebas automatizadas locales usan dobles y no
+comprueban conectividad externa.
 
 El Cliente autenticado puede subir y consultar su propia imagen de perfil mediante:
 
@@ -11,7 +16,8 @@ La clave del objeto se persiste en `clientes.imagen_perfil_clave_s3`. Los objeto
 
 Se admiten únicamente JPEG, PNG y WebP de hasta 5 MiB. El backend compara el MIME declarado con la firma real del archivo antes de reutilizar `S3StorageService`.
 
-Las pruebas automatizadas son locales y no acceden a AWS. La conectividad real sigue pendiente hasta configurar un bucket existente y credenciales válidas.
+Las pruebas automatizadas son locales y no acceden a AWS; la validación real
+descrita arriba fue reportada por el equipo, no reproducida en esta revisión.
 
 ## Configuración
 
@@ -55,9 +61,9 @@ aws sso login --profile fitpath-dev
 
 Si la cuenta no usa SSO, crear o rotar una credencial de desarrollo con permisos mínimos y cargarla localmente con `aws configure --profile fitpath-dev`. Los permisos requeridos por este caso son `s3:PutObject`, `s3:GetObject` y `s3:DeleteObject` únicamente sobre `<ARN_BUCKET>/fitpath/clientes/*`. El bloqueo de acceso público del bucket debe permanecer activo.
 
-## Demostración pendiente de conectividad
+## Pasos para reproducir la validación real
 
-1. Configurar localmente `AWS_PROFILE`, `AWS_S3_BUCKET` y `AWS_REGION`.
+1. Configurar localmente `AWS_PROFILE`, `AWS_S3_BUCKET` y `AWS_REGION`; no imprimir ni compartir credenciales.
 2. Ejecutar migraciones y Flask sin publicar las variables.
 3. Iniciar sesión como Cliente y cargar una imagen válida desde **Mi perfil**.
 4. Comprobar en S3 que el objeto no es público y que usa cifrado `AES256`.

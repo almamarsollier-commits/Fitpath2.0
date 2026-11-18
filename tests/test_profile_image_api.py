@@ -15,6 +15,9 @@ from backend.fitpath.services.s3_storage import StorageOperationError
 
 
 PNG_IMAGE = b"\x89PNG\r\n\x1a\n" + b"profile-image"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+CLIENT_SHELL = REPOSITORY_ROOT / "statics" / "js" / "modules" / "cliente-shell.js"
+PROFILE_IMAGE_MODULE = REPOSITORY_ROOT / "statics" / "js" / "modules" / "profile-image.js"
 
 
 class FakeProfileStorage:
@@ -56,7 +59,7 @@ class ProfileImageApiTests(unittest.TestCase):
         self.addCleanup(self.db.close)
         self.assertEqual(
             apply_migrations(self.db, self.app.config["MIGRATIONS_DIR"]),
-            tuple(range(1, 13)),
+            tuple(range(1, 15)),
         )
         seed_initial_roles(self.db)
         seed_initial_permissions(self.db)
@@ -271,6 +274,16 @@ class ProfileImageApiTests(unittest.TestCase):
             response = restarted_client.get("/api/v1/client/profile-image")
         self.assertEqual(response.status_code, 200)
         self.assertIn("new-profile-image", response.json["image"]["url"])
+
+    def test_client_shell_reuses_validated_profile_image_module(self):
+        shell = CLIENT_SHELL.read_text(encoding="utf-8")
+        module = PROFILE_IMAGE_MODULE.read_text(encoding="utf-8")
+        self.assertIn('import { initializeProfileImage } from "./profile-image.js";', shell)
+        self.assertIn("await initializeProfileImage({ identity, fullName });", shell)
+        self.assertNotIn("/api/v1/client/profile-image", shell)
+        self.assertIn('fetch("/api/v1/me/profile-image"', module)
+        self.assertIn('"X-CSRF-Token": identity.csrf_token', module)
+        self.assertIn("/^image\\/(jpeg|png|webp)$/", module)
 
 
 if __name__ == "__main__":

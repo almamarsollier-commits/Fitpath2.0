@@ -202,18 +202,26 @@ def client_memberships():
             """
         ).fetchall()
     ]
-    active = connection.execute(
-        """
-        SELECT cm.id_cliente_membresia AS id, cm.membresia_id,
-               m.nombre, cm.fecha_inicio, cm.fecha_fin
-        FROM cliente_membresia cm
-        JOIN membresias m ON m.id_membresia = cm.membresia_id
-        WHERE cm.cliente_id = ? AND cm.estado = 'activa'
-        """,
-        (client_id,),
-    ).fetchone()
+    subscriptions = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT cm.id_cliente_membresia AS id, cm.membresia_id,
+                   m.nombre, cm.estado, cm.fecha_inicio, cm.fecha_fin
+            FROM cliente_membresia cm
+            JOIN membresias m ON m.id_membresia = cm.membresia_id
+            WHERE cm.cliente_id = ?
+            ORDER BY cm.fecha_inicio DESC, cm.id_cliente_membresia DESC
+            """,
+            (client_id,),
+        ).fetchall()
+    ]
+    active = next(
+        (subscription for subscription in subscriptions if subscription["estado"] == "activa"),
+        None,
+    )
     return jsonify(
-        {"memberships": memberships, "active": dict(active) if active else None}
+        {"memberships": memberships, "active": active, "subscriptions": subscriptions}
     )
 
 

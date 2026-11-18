@@ -12,6 +12,7 @@ from ...database import get_db
 from ...permissions import CLIENT_DATA_PERMISSION
 from ...services.enrollments import (
     ActiveEnrollmentNotFoundError,
+    ActiveMembershipRequiredError,
     ClassFullError,
     ClassNotFoundError,
     ClassUnavailableError,
@@ -22,6 +23,7 @@ from ...services.enrollments import (
     cancel_enrollment,
     create_enrollment,
 )
+from ...services.nutrition import get_nutrition_plan, list_nutrition_plans
 
 
 client_api_blueprint = Blueprint("client_api", __name__, url_prefix="/api/v1/client")
@@ -74,6 +76,8 @@ def _classes_payload(client_id):
             c.id_clase AS id, a.nombre AS actividad, s.nombre AS sede,
             s.direccion, s.zona_horaria, c.inicio_utc, c.fin_utc,
             c.cupo_maximo, c.estado,
+            trim(tu.nombre || ' ' || tu.apellido) AS entrenador,
+            e.especialidad AS entrenador_especialidad,
             (SELECT count(*) FROM inscripciones AS occupied
              WHERE occupied.clase_id = c.id_clase AND occupied.estado = 'activa')
                 AS inscriptos,
@@ -84,6 +88,8 @@ def _classes_payload(client_id):
         FROM clases AS c
         JOIN actividades AS a ON a.id_actividad = c.actividad_id
         JOIN sedes AS s ON s.id_sede = c.sede_id
+        JOIN entrenadores AS e ON e.id_entrenador = c.entrenador_id
+        JOIN usuarios AS tu ON tu.id_usuario = e.usuario_id
         WHERE c.inicio_utc > ?
         ORDER BY c.inicio_utc, c.id_clase
         LIMIT 100
@@ -100,6 +106,8 @@ def _classes_payload(client_id):
             "inicio_utc": row["inicio_utc"],
             "fin_utc": row["fin_utc"],
             "estado": row["estado"],
+            "entrenador": row["entrenador"],
+            "entrenador_especialidad": row["entrenador_especialidad"],
             "cupo_maximo": row["cupo_maximo"],
             "inscriptos": row["inscriptos"],
             "cupos_disponibles": max(0, row["cupo_maximo"] - row["inscriptos"]),
@@ -134,6 +142,8 @@ def enroll_in_class(class_id):
         return jsonify({"error": "class_not_found"}), 404
     except DuplicateActiveEnrollmentError:
         return jsonify({"error": "already_enrolled"}), 409
+    except ActiveMembershipRequiredError:
+        return jsonify({"error": "active_membership_required"}), 409
     except ClassFullError:
         return jsonify({"error": "class_full"}), 409
     except ClassUnavailableError:
@@ -177,18 +187,24 @@ def get_client_enrollments():
         """
         SELECT i.id_inscripcion AS id, i.estado, i.fecha_utc,
                c.id_clase, c.inicio_utc, c.fin_utc, c.estado AS clase_estado,
-               a.nombre AS actividad, s.nombre AS sede,
-               ast.estado AS asistencia
+               a.nombre AS actividad, s.nombre AS sede, s.zona_horaria,
+               ast.estado AS asistencia,
+               CASE WHEN gce.id_evento_calendar IS NULL THEN 0 ELSE 1 END
+                   AS calendar_event_added,
+               gce.google_event_url AS calendar_event_url
         FROM inscripciones AS i
         JOIN clases AS c ON c.id_clase = i.clase_id
         JOIN actividades AS a ON a.id_actividad = c.actividad_id
         JOIN sedes AS s ON s.id_sede = c.sede_id
         LEFT JOIN asistencias AS ast ON ast.inscripcion_id = i.id_inscripcion
+        LEFT JOIN eventos_google_calendar AS gce
+          ON gce.inscripcion_id = i.id_inscripcion
+         AND gce.usuario_id = ?
         WHERE i.cliente_id = ?
         ORDER BY c.inicio_utc DESC, i.id_inscripcion DESC
         LIMIT 100
         """,
-        (client_id,),
+        (current_identity()["user"]["id"], client_id),
     ).fetchall()
     return jsonify({"enrollments": [dict(row) for row in rows]})
 
@@ -203,7 +219,7 @@ def get_client_routines():
     routines = connection.execute(
         """
         SELECT r.id_rutina AS id, r.nombre, r.descripcion, r.fecha_creacion_utc,
-               r.observaciones_entrenador, o.nombre AS objetivo
+               r.observaciones_entrenador, r.activa, o.nombre AS objetivo
         FROM rutinas AS r
         LEFT JOIN objetivos AS o ON o.id_objetivo = r.objetivo_id
         WHERE r.cliente_id = ?
@@ -218,7 +234,8 @@ def get_client_routines():
             dict(row)
             for row in connection.execute(
                 """
-                SELECT e.id_ejercicio AS id, e.nombre, e.grupo_muscular,
+                SELECT re.id_rutina_ejercicio AS asignacion_id,
+                       e.id_ejercicio AS id, e.nombre, e.grupo_muscular,
                        e.descripcion, re.orden, re.series, re.repeticiones,
                        re.peso_gramos, re.descanso_segundos
                 FROM rutina_ejercicio AS re
@@ -231,6 +248,27 @@ def get_client_routines():
         ]
         payload.append(item)
     return jsonify({"routines": payload})
+
+
+@client_api_blueprint.get("/nutrition-plans")
+@client_required
+def get_client_nutrition_plans():
+    client_id, error = _client_or_error()
+    if error:
+        return error
+    return jsonify({"nutrition_plans": list_nutrition_plans(get_db(), client_id)})
+
+
+@client_api_blueprint.get("/nutrition-plans/<int:plan_id>")
+@client_required
+def get_client_nutrition_plan(plan_id):
+    client_id, error = _client_or_error()
+    if error:
+        return error
+    plan = get_nutrition_plan(get_db(), client_id, plan_id)
+    if plan is None:
+        return jsonify({"error": "nutrition_plan_not_found"}), 404
+    return jsonify({"nutrition_plan": plan})
 
 
 @client_api_blueprint.get("/progress")

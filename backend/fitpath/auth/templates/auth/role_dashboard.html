@@ -15,7 +15,13 @@
     <aside class="fp-sidebar fp-role-sidebar" id="fp-sidebar" aria-label="Navegación de {{ role }}">
       <div class="fp-sidebar-brand"><a class="fp-brand" href="/auth/{{ 'jefe-sede' if role_slug == 'manager' else ('administrador' if role_slug == 'admin' else ('tecnico' if role_slug == 'technician' else 'entrenador')) }}"><span class="fp-brand-mark">F</span><span class="fp-brand-word">FIT<span>PATH</span></span><span class="fp-brand-version">2.0</span></a><button class="fp-icon-button fp-sidebar-close" type="button" aria-label="Cerrar menú" data-menu-close>×</button></div>
       <div class="fp-client-side-heading"><span class="fp-client-avatar" aria-hidden="true">FP</span><span><strong>{{ role }}</strong><small data-role-user>Cargando sesión…</small></span></div>
-      <nav class="fp-primary-nav fp-client-nav" aria-label="Módulos del rol"><p class="fp-nav-heading">MÓDULOS</p><a class="fp-nav-link is-current" aria-current="page" href="#overview"><span>Resumen operativo</span></a><a class="fp-nav-link" href="#management"><span>Gestión</span></a><a class="fp-nav-link" href="/auth/profile" data-own-profile-link><span>Perfil propio</span></a></nav>
+      <nav class="fp-primary-nav fp-client-nav" aria-label="Módulos del rol">
+        <p class="fp-nav-heading">MÓDULOS</p>
+        <a class="fp-nav-link is-current" aria-current="page" href="#overview"><span>Resumen operativo</span></a>
+        {% if role_slug == 'trainer' %}<a class="fp-nav-link" href="/auth/entrenador/rutinas"><span>Mis rutinas</span></a><a class="fp-nav-link" href="/auth/entrenador/asistencias"><span>Asistencias</span></a>{% endif %}
+        <a class="fp-nav-link" href="#management"><span>Gestión</span></a>
+        <a class="fp-nav-link" href="/auth/profile" data-own-profile-link><span>Perfil propio</span></a>
+      </nav>
       <div class="fp-sidebar-bottom"><form action="/auth/logout" method="post" data-role-logout><input type="hidden" name="csrf_token"><button class="fp-button fp-button-primary" type="submit" disabled>Cerrar sesión</button></form><p class="fp-sidebar-version">FITPATH 2.0 · {{ role|upper }}</p></div>
     </aside>
     <button class="fp-drawer-overlay" type="button" aria-label="Cerrar menú" tabindex="-1" hidden data-menu-overlay></button>

@@ -12,6 +12,7 @@ from backend.fitpath.database import connect_database
 from backend.fitpath.migrations import apply_migrations
 from backend.fitpath.seeds import seed_initial_roles
 from backend.fitpath.services.enrollments import (
+    ActiveMembershipRequiredError,
     ClassFullError,
     ClassNotFoundError,
     ClassUnavailableError,
@@ -37,7 +38,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
 
         self.assertEqual(
             apply_migrations(self.connection, MIGRATIONS_DIR),
-            tuple(range(1, 13)),
+            tuple(range(1, 15)),
         )
         seed_initial_roles(self.connection)
 
@@ -53,6 +54,18 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
             "mateo.cliente",
             "mateo@example.com",
         )
+        self.connection.execute(
+            "INSERT INTO monedas (codigo, decimales) VALUES ('ARS', 2)"
+        )
+        self.membership_id = self.connection.execute(
+            """
+            INSERT INTO membresias
+                (nombre, precio_unidades_menores, moneda, descripcion, activa)
+            VALUES ('Plan de pruebas', 0, 'ARS', 'Membresía para inscripciones', 1)
+            """
+        ).lastrowid
+        self.activate_membership(self.client_id)
+        self.activate_membership(self.other_client_id)
         trainer_user_id = self.create_user(
             "Eva",
             "eva.entrenadora",
@@ -121,6 +134,16 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
         return self.connection.execute(
             "INSERT INTO clientes (usuario_id) VALUES (?)",
             (user_id,),
+        ).lastrowid
+
+    def activate_membership(self, client_id):
+        return self.connection.execute(
+            """
+            INSERT INTO cliente_membresia
+                (cliente_id, membresia_id, fecha_inicio, fecha_fin, estado)
+            VALUES (?, ?, '2020-01-01', NULL, 'activa')
+            """,
+            (client_id, self.membership_id),
         ).lastrowid
 
     def create_class(
@@ -202,6 +225,8 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
                 "intentos_pago",
                 "eventos_webhook_pago",
                 "perfiles_usuario",
+                "autorizaciones_google_calendar",
+                "eventos_google_calendar",
             },
         )
         versions = tuple(
@@ -225,6 +250,8 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
                 (10, "0010_cliente_imagen_perfil.sql"),
                 (11, "0011_mercado_pago_intentos.sql"),
                 (12, "0012_perfiles_usuario.sql"),
+                (13, "0013_rutinas_activas.sql"),
+                (14, "0014_google_calendar.sql"),
             ),
         )
         self.assertEqual(
@@ -343,6 +370,34 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
             (self.class_id,),
         ).fetchone()[0]
         self.assertEqual(capacity - active_count, 3)
+
+    def test_enrollment_requires_an_active_current_membership(self):
+        unsubscribed_client_id = self.create_client(
+            "Sin",
+            "sin.membresia",
+            "sin-membresia@example.com",
+        )
+        self.connection.commit()
+        with self.assertRaises(ActiveMembershipRequiredError):
+            create_enrollment(self.connection, unsubscribed_client_id, self.class_id)
+        self.assertFalse(self.connection.in_transaction)
+
+        self.connection.execute(
+            """
+            UPDATE cliente_membresia
+            SET fecha_fin = '2020-01-02'
+            WHERE cliente_id = ? AND estado = 'activa'
+            """,
+            (self.client_id,),
+        )
+        self.connection.commit()
+        with self.assertRaises(ActiveMembershipRequiredError):
+            create_enrollment(self.connection, self.client_id, self.class_id)
+        self.assertFalse(self.connection.in_transaction)
+        self.assertEqual(
+            self.connection.execute("SELECT count(*) FROM inscripciones").fetchone()[0],
+            0,
+        )
 
     def test_active_enrollment_duplicate_is_rejected_by_service_and_index(self):
         create_enrollment(self.connection, self.client_id, self.class_id)
@@ -611,7 +666,7 @@ class EnrollmentSchemaAndServiceTests(unittest.TestCase):
             self.connection.execute(
                 "SELECT count(*) FROM schema_migrations"
             ).fetchone()[0],
-            12,
+            14,
         )
         self.assertFalse(self.connection.in_transaction)
         self.assertEqual(

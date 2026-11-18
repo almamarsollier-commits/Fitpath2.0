@@ -13,7 +13,19 @@
     if (reason === "authentication_required") return "Necesitás iniciar sesión en FitPath para consultar información real.";
     if (reason === "permission_denied") return "Tu cuenta no tiene permiso para realizar esa consulta.";
     if (reason === "unsupported_operation") return "Esa operación todavía no está habilitada por el backend de FitPath.";
+    if (reason === "active_membership_required") return "Necesitás una membresía activa y vigente antes de inscribirte. Podés revisar tu plan desde Mi perfil.";
+    if (reason === "already_enrolled") return "Ya tenés una inscripción activa en esa clase.";
+    if (reason === "class_full") return "La clase ya no tiene cupos disponibles.";
+    if (reason === "class_unavailable") return "La clase ya no admite nuevas inscripciones.";
+    if (reason === "class_not_found") return "No encontré esa clase entre las opciones disponibles.";
+    if (reason === "active_enrollment_not_found") return "No encontré una inscripción activa propia para esa clase.";
+    if (reason === "enrollment_not_cancellable") return "Esa inscripción ya no se puede cancelar porque la clase comenzó.";
+    if (reason === "csrf_failed") return "La sesión cambió. Recargá la página antes de confirmar la operación.";
     return "El backend de FitPath no está disponible. Puedo seguir respondiendo preguntas generales, pero las operaciones reales están temporalmente deshabilitadas.";
+  }
+
+  function backendWasReached(reason) {
+    return !["backend_unavailable", "authentication_required", "permission_denied", "unsupported_operation"].includes(reason);
   }
 
   function formatBackendResult(operation, payload) {
@@ -67,7 +79,9 @@
 
       this.state.pendingAction = null;
       const response = await this.client.perform(pending.operation, { id: pending.id });
-      if (!response.ok) return this._result(unavailableMessage(response.reason), { backendAvailable: false });
+      if (!response.ok) return this._result(unavailableMessage(response.reason), {
+        backendAvailable: backendWasReached(response.reason)
+      });
       return this._result(formatBackendResult(pending.operation, response.data), { backendAvailable: true });
     }
 
@@ -132,12 +146,12 @@
             return this._result(
               intent.operation === "enrollments.create"
                 ? "Para preparar la inscripción necesito el número de la clase. Primero podés pedirme “ver clases”."
-                : "Para preparar la cancelación necesito el número de la reserva. Consultá tus reservas desde FitPath.",
+                : "Para preparar la cancelación necesito el número de la clase. Consultá tus reservas desde FitPath.",
               { suggestions: intent.suggestions || [] }
             );
           }
           this.state.pendingAction = { operation: intent.operation, id };
-          const verb = intent.operation === "enrollments.create" ? "inscribirte en la clase" : "cancelar la reserva";
+          const verb = intent.operation === "enrollments.create" ? "inscribirte en la clase" : "cancelar la inscripción a la clase";
           return this._result(`Voy a solicitar ${verb} ${id}. Escribí “confirmar” para ejecutar la operación real o “mejor no” para descartarla.`, {
             confirmationRequired: true,
             suggestions: ["Confirmar", "Mejor no"]

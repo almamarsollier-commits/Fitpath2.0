@@ -2,6 +2,7 @@ import { initializeDrawer } from "./navigation-drawer.js";
 import { initializeClientData } from "./client-data.js";
 import { initializePayments } from "./payments.js";
 import { initializeAccountProfile } from "./profile.js";
+import { initializeProfileImage } from "./profile-image.js";
 import { initializeSmartAssistant } from "../assistant/loader.js";
 
 const routes = {
@@ -16,6 +17,8 @@ const routes = {
   ejercicio: "/templates/cliente/rutina/ejercicio.html",
   progreso: "/templates/cliente/progreso/index.html",
   evolucion: "/templates/cliente/progreso/evolucion.html",
+  alimentacion: "/templates/cliente/alimentacion/index.html",
+  detalleAlimentacion: "/templates/cliente/alimentacion/detalle.html",
   perfil: "/templates/cliente/perfil/index.html",
   membresia: "/templates/cliente/perfil/membresia.html"
 };
@@ -24,22 +27,25 @@ const sections = [
   { key: "inicio", label: "Inicio", href: routes.inicio, icon: "home" },
   { key: "clases", label: "Clases y reservas", href: routes.clases, icon: "calendar" },
   { key: "rutina", label: "Mi rutina", href: routes.rutina, icon: "routine" },
+  { key: "alimentacion", label: "Mi alimentación", href: routes.alimentacion, icon: "nutrition" },
   { key: "progreso", label: "Progreso", href: routes.progreso, icon: "progress" },
   { key: "perfil", label: "Mi perfil", href: routes.perfil, icon: "profile" }
 ];
 
 const viewMap = {
   "inicio-resumen": { section: "inicio", title: "Inicio", crumbs: [] },
-  "inicio-actividad": { section: "inicio", title: "Resumen de actividad", crumbs: [{ label: "Inicio", href: routes.inicio }] },
-  "inicio-proxima-clase": { section: "inicio", title: "Detalle de próxima clase", crumbs: [{ label: "Inicio", href: routes.inicio }] },
+  "inicio-actividad": { section: "inicio", title: "Actividad", crumbs: [{ label: "Inicio", href: routes.inicio }] },
+  "inicio-proxima-clase": { section: "inicio", title: "Próxima clase", crumbs: [{ label: "Inicio", href: routes.inicio }] },
   "clases-listado": { section: "clases", title: "Explorar clases", crumbs: [] },
   "clases-detalle": { section: "clases", title: "Detalle de clase", crumbs: [{ label: "Clases", href: routes.clases }] },
   "clases-reservas": { section: "clases", title: "Mis reservas", crumbs: [{ label: "Clases", href: routes.clases }] },
   "rutina-semana": { section: "rutina", title: "Rutina semanal", crumbs: [] },
-  "rutina-entrenamiento": { section: "rutina", title: "Entrenamiento del lunes", crumbs: [{ label: "Mi rutina", href: routes.rutina }] },
-  "rutina-ejercicio": { section: "rutina", title: "Detalle del ejercicio", crumbs: [{ label: "Mi rutina", href: routes.rutina }, { label: "Entrenamiento del lunes", href: routes.entrenamiento }] },
+  "rutina-entrenamiento": { section: "rutina", title: "Detalle de rutina", crumbs: [{ label: "Mi rutina", href: routes.rutina }] },
+  "rutina-ejercicio": { section: "rutina", title: "Detalle del ejercicio", crumbs: [{ label: "Mi rutina", href: routes.rutina }] },
   "progreso-inicio": { section: "progreso", title: "Progreso", crumbs: [] },
-  "progreso-evolucion": { section: "progreso", title: "Evolución y objetivos", crumbs: [{ label: "Progreso", href: routes.progreso }] },
+  "progreso-evolucion": { section: "progreso", title: "Evolución física", crumbs: [{ label: "Progreso", href: routes.progreso }] },
+  "alimentacion-inicio": { section: "alimentacion", title: "Mi alimentación", crumbs: [] },
+  "alimentacion-detalle": { section: "alimentacion", title: "Detalle del plan", crumbs: [{ label: "Mi alimentación", href: routes.alimentacion }] },
   "perfil-inicio": { section: "perfil", title: "Mi perfil", crumbs: [] },
   "perfil-membresia": { section: "perfil", title: "Detalle de membresía", crumbs: [{ label: "Mi perfil", href: routes.perfil }] }
 };
@@ -49,6 +55,7 @@ const iconPaths = {
   home: ["M3 10.8 12 3l9 7.8", "M5.5 9.5V21h13V9.5", "M9 21v-7h6v7"],
   calendar: ["M4 5h16v16H4z", "M8 3v4", "M16 3v4", "M4 10h16"],
   routine: ["M4 9v6", "M8 5v14", "M16 5v14", "M20 9v6", "M8 12h8"],
+  nutrition: ["M12 21V10", "M12 10c0-4 3-7 8-7 0 5-3 8-8 8", "M12 14c0-4-3-7-8-7 0 5 3 8 8 8"],
   progress: ["M4 19V5", "M4 19h16", "m7 15 4-4 3 2 5-6", "M16 7h3v3"],
   profile: ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z", "M4 21a8 8 0 0 1 16 0"]
 };
@@ -161,105 +168,6 @@ function renderBreadcrumbs(view) {
   });
 }
 
-function showProfileImage(url, fullName) {
-  if (!url) return;
-  document.querySelectorAll(".fp-avatar, .fp-client-avatar, .cl-profile-avatar").forEach((avatar) => {
-    const image = document.createElement("img");
-    image.src = url;
-    image.alt = avatar.classList.contains("cl-profile-avatar") ? `Foto de perfil de ${fullName}` : "";
-    image.referrerPolicy = "no-referrer";
-    avatar.replaceChildren(image);
-    avatar.classList.add("has-profile-image");
-  });
-}
-
-async function initializeProfileImage(identity, fullName) {
-  const form = document.querySelector("[data-profile-image-form]");
-  const input = form?.elements.namedItem("image");
-  const button = form?.querySelector("button[type='submit']");
-  const status = document.querySelector("[data-profile-image-status]");
-
-  const setStatus = (message, isError = false) => {
-    if (!status) return;
-    status.textContent = message;
-    status.dataset.error = isError ? "true" : "false";
-  };
-
-  let previewUrl = null;
-  input?.addEventListener("change", () => {
-    const file = input.files?.[0];
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    previewUrl = null;
-    if (!file) return;
-    if (!file.type.match(/^image\/(jpeg|png|webp)$/) || file.size > 5 * 1024 * 1024) {
-      setStatus("Elegí una imagen JPEG, PNG o WebP de hasta 5 MiB.", true);
-      return;
-    }
-    previewUrl = URL.createObjectURL(file);
-    showProfileImage(previewUrl, fullName);
-    setStatus("Previsualización lista. Confirmá con Guardar foto.");
-  });
-
-  try {
-    const response = await fetch("/api/v1/client/profile-image", {
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: { Accept: "application/json" }
-    });
-    if (response.ok) {
-      const payload = await response.json();
-      if (payload.image?.url) showProfileImage(payload.image.url, fullName);
-    } else if (response.status === 503) {
-      setStatus("La carga de fotos requiere configurar el bucket privado de desarrollo.", true);
-    }
-  } catch (_error) {
-    setStatus("No pudimos consultar tu foto de perfil.", true);
-  }
-
-  form?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const file = input?.files?.[0];
-    if (!file) {
-      setStatus("Elegí una imagen JPEG, PNG o WebP.", true);
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setStatus("La imagen debe pesar como máximo 5 MiB.", true);
-      return;
-    }
-
-    if (button) button.disabled = true;
-    setStatus("Subiendo tu foto…");
-    const body = new FormData();
-    body.append("image", file);
-    try {
-      const response = await fetch("/api/v1/client/profile-image", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          Accept: "application/json",
-          "X-CSRF-Token": identity.csrf_token
-        },
-        body
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.message || payload.error || "upload_failed");
-      if (payload.image?.url) showProfileImage(payload.image.url, fullName);
-      form.reset();
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      previewUrl = null;
-      setStatus("Tu foto se guardó de forma privada.");
-    } catch (error) {
-      const message = error.message === "storage_not_configured"
-        ? "El almacenamiento S3 todavía no está configurado."
-        : "No pudimos guardar la imagen. Revisá el formato e intentá nuevamente.";
-      setStatus(message, true);
-    } finally {
-      if (button) button.disabled = false;
-    }
-  });
-}
-
 const view = viewMap[document.body.dataset.clientView] ?? viewMap["inicio-resumen"];
 renderSidebar(view.section);
 renderBreadcrumbs(view);
@@ -310,7 +218,7 @@ async function initializeFitPathSession() {
     if (identityLabel) identityLabel.textContent = `${identity.user.rol} · ID FitPath ${identity.user.id}`;
     if (csrfInput) csrfInput.value = identity.csrf_token;
     if (logoutButton) logoutButton.disabled = false;
-    await initializeProfileImage(identity, fullName);
+    await initializeProfileImage({ identity, fullName });
     await initializeAccountProfile({ csrfToken: identity.csrf_token });
     await initializeClientData({ csrfToken: identity.csrf_token });
     await initializePayments({ csrfToken: identity.csrf_token });

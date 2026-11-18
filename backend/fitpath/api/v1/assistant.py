@@ -2,11 +2,25 @@
 
 from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, jsonify, request
 
 from ...auth.authorization import current_identity, require_api_access
 from ...database import get_db
 from ...permissions import CLIENT_DATA_PERMISSION
+from ...services.enrollments import (
+    ActiveEnrollmentNotFoundError,
+    ActiveMembershipRequiredError,
+    ClassFullError,
+    ClassNotFoundError,
+    ClassUnavailableError,
+    DuplicateActiveEnrollmentError,
+    EnrollmentCancellationError,
+    EnrollmentError,
+    EnrollmentRequestError,
+    cancel_enrollment,
+    create_enrollment,
+)
+from .role_utils import csrf_is_valid, positive_integer, require_json_fields
 
 
 assistant_api_blueprint = Blueprint(
@@ -47,9 +61,9 @@ def capabilities():
                 "progress.get",
                 "membership.get",
             ],
-            "write": [],
-            "disabled": ["enrollments.create", "enrollments.cancel"],
-            "reason": "assistant_is_read_only",
+            "write": ["enrollments.create", "enrollments.cancel"],
+            "disabled": [],
+            "reason": None,
         }
     )
 
@@ -58,7 +72,22 @@ def capabilities():
 @client_read_required
 def classes():
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    rows = get_db().execute(
+    today = now[:10]
+    client_id = _client_id()
+    if client_id is None:
+        return _client_profile_error()
+    connection = get_db()
+    has_active_membership = connection.execute(
+        """
+        SELECT 1
+        FROM cliente_membresia
+        WHERE cliente_id = ? AND estado = 'activa'
+          AND fecha_inicio <= ?
+          AND (fecha_fin IS NULL OR fecha_fin >= ?)
+        """,
+        (client_id, today, today),
+    ).fetchone() is not None
+    rows = connection.execute(
         """
         SELECT
             c.id_clase,
@@ -68,7 +97,12 @@ def classes():
             c.fin_utc,
             c.cupo_maximo,
             c.cupo_maximo - SUM(CASE WHEN i.estado = 'activa' THEN 1 ELSE 0 END)
-                AS cupos_disponibles
+                AS cupos_disponibles,
+            EXISTS (
+                SELECT 1 FROM inscripciones AS own
+                WHERE own.clase_id = c.id_clase
+                  AND own.cliente_id = ? AND own.estado = 'activa'
+            ) AS inscripto
         FROM clases AS c
         JOIN actividades AS a ON a.id_actividad = c.actividad_id
         JOIN sedes AS s ON s.id_sede = c.sede_id
@@ -78,7 +112,7 @@ def classes():
         ORDER BY c.inicio_utc, c.id_clase
         LIMIT 20
         """,
-        (now,),
+        (client_id, now),
     ).fetchall()
     return jsonify(
         {
@@ -91,10 +125,82 @@ def classes():
                     "ends_at": row["fin_utc"],
                     "capacity": row["cupo_maximo"],
                     "available_spots": max(0, row["cupos_disponibles"]),
-                    "enrollment_available": False,
+                    "enrollment_available": bool(
+                        has_active_membership
+                        and not row["inscripto"]
+                        and row["cupos_disponibles"] > 0
+                    ),
+                    "enrolled": bool(row["inscripto"]),
                 }
                 for row in rows
             ]
+        }
+    )
+
+
+@assistant_api_blueprint.post("/enrollments")
+@client_read_required
+def create_assistant_enrollment():
+    if not csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    client_id = _client_id()
+    if client_id is None:
+        return _client_profile_error()
+    payload = request.get_json(silent=True)
+    try:
+        require_json_fields(payload, {"clase_id"}, {"clase_id"})
+        class_id = positive_integer(payload["clase_id"], "clase_id")
+        enrollment_id = create_enrollment(get_db(), client_id, class_id)
+    except ValueError:
+        return jsonify({"error": "invalid_request"}), 400
+    except EnrollmentRequestError:
+        return jsonify({"error": "invalid_request"}), 400
+    except ClassNotFoundError:
+        return jsonify({"error": "class_not_found"}), 404
+    except DuplicateActiveEnrollmentError:
+        return jsonify({"error": "already_enrolled"}), 409
+    except ActiveMembershipRequiredError:
+        return jsonify({"error": "active_membership_required"}), 409
+    except ClassFullError:
+        return jsonify({"error": "class_full"}), 409
+    except ClassUnavailableError:
+        return jsonify({"error": "class_unavailable"}), 409
+    except EnrollmentError:
+        current_app.logger.exception("El asistente no pudo crear la inscripción.")
+        return jsonify({"error": "enrollment_failed"}), 500
+    return jsonify(
+        {
+            "enrollment": {"id": enrollment_id, "class_id": class_id},
+            "message": f"Tu inscripción a la clase {class_id} quedó confirmada.",
+        }
+    ), 201
+
+
+@assistant_api_blueprint.delete("/enrollments/<int:class_id>")
+@client_read_required
+def cancel_assistant_enrollment(class_id):
+    if not csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    client_id = _client_id()
+    if client_id is None:
+        return _client_profile_error()
+    try:
+        enrollment_id = cancel_enrollment(get_db(), client_id, class_id)
+    except ActiveEnrollmentNotFoundError:
+        return jsonify({"error": "active_enrollment_not_found"}), 404
+    except EnrollmentCancellationError:
+        return jsonify({"error": "enrollment_not_cancellable"}), 409
+    except EnrollmentError:
+        current_app.logger.exception("El asistente no pudo cancelar la inscripción.")
+        return jsonify({"error": "enrollment_cancellation_failed"}), 500
+    return jsonify(
+        {
+            "enrollment": {
+                "id": enrollment_id,
+                "class_id": class_id,
+                "status": "cancelada",
+            },
+            "message": f"La inscripción a la clase {class_id} quedó cancelada.",
         }
     )
 
@@ -111,7 +217,7 @@ def routine():
             AS cantidad_ejercicios
         FROM rutinas AS r
         LEFT JOIN rutina_ejercicio AS re ON re.rutina_id = r.id_rutina
-        WHERE r.cliente_id = ?
+        WHERE r.cliente_id = ? AND r.activa = 1
         GROUP BY r.id_rutina
         ORDER BY r.fecha_creacion_utc DESC, r.id_rutina DESC
         LIMIT 1

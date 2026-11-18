@@ -1627,6 +1627,7 @@ h1, h2, h3 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacing: -.04
 .fp-showcase .cl-routine-note { padding: .7rem; color: #dce4e7; background: rgb(191 232 80 / 8%); border-left: 3px solid var(--fp-lime); border-radius: .35rem; font-size: .7rem; }
 .fp-showcase .cl-real-exercise-list { display: grid; gap: 0; padding: 0; margin: 1rem 0 0; list-style: none; }
 .fp-showcase .cl-real-exercise-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .8rem; padding: .75rem 0; border-top: 1px solid #30393d; }
+.fp-showcase .cl-exercise-copy { display: grid; min-width: 0; gap: .2rem; }
 .fp-showcase .cl-real-exercise-list li > span:nth-child(2) { display: grid; gap: .2rem; }
 .fp-showcase .cl-real-exercise-list strong { color: #f1f4f5; font-size: .74rem; }
 .fp-showcase .cl-real-exercise-list small { color: #9eaaaf; font-size: .62rem; }
@@ -1724,6 +1725,8 @@ h1, h2, h3 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacing: -.04
 .fp-showcase .cl-chart > span { display: flex; min-width: 0; flex: 1; flex-direction: column; align-items: center; justify-content: end; gap: 0.35rem; height: 100%; }
 .fp-showcase .cl-chart i { display: block; width: min(100%, 2rem); height: var(--chart-height); background: linear-gradient(0deg, #5e8f1e, #a6d930); border-radius: 0.5rem 0.5rem 0.15rem 0.15rem; }
 .fp-showcase .cl-chart small { color: #58656b; font-size: 0.57rem; font-weight: 700; }
+.fp-showcase .cl-chart-value { color: #eff4f5; font-size: 0.62rem; font-weight: 760; }
+.fp-showcase .cl-evolution-grid { display: grid; gap: 0.8rem; margin-top: 0.8rem; }
 .fp-showcase .cl-profile-overview { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem; padding: 1rem; }
 .fp-showcase .cl-profile-overview > div { flex: 1; min-width: 11rem; }
 .fp-showcase .cl-profile-overview h2 { margin: 0.2rem 0; color: #1b2428; font-size: 1.1rem; }
@@ -1740,6 +1743,7 @@ h1, h2, h3 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacing: -.04
 .fp-showcase .cl-footer > span:last-child { color: #59656b; }
 
 @media (min-width: 640px) {
+  .fp-showcase .cl-evolution-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fp-showcase .cl-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .fp-showcase .cl-home-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fp-showcase .cl-class-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2071,4 +2075,234 @@ h1, h2, h3 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacing: -.04
 }
 @media (prefers-reduced-motion: reduce) {
   .fp-assistant-message.is-thinking p { animation: none; }
+}
+
+/* Entrenador: módulo independiente de rutinas */
+.fp-showcase.fp-role-page .tr-dashboard-module-card { align-content: start; gap: 0.65rem; border-color: #cbdcaf; }
+.fp-showcase.fp-role-page .tr-dashboard-module-card h3 { margin: 0; color: #1c282d; }
+.fp-showcase.fp-role-page .tr-dashboard-module-card > p { margin: 0; color: #526168; font-size: 0.72rem; line-height: 1.55; }
+.fp-showcase.fp-role-page .tr-dashboard-module-card .fp-button { margin-top: auto; }
+.fp-showcase.fp-trainer-routines { background: #eef2f3; }
+.fp-trainer-routines .fp-breadcrumb a { color: #496047; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 0.2rem; }
+.fp-trainer-routines .fp-breadcrumb a:hover { color: #294d13; text-decoration-color: currentColor; }
+.fp-trainer-routines .tr-routines-page { width: min(100%, 78rem); }
+.fp-showcase .tr-module-status {
+  padding: 0.75rem 0.9rem;
+  margin: 0 0 1rem;
+  color: #34434a;
+  background: #fff;
+  border: 1px solid #d7dfe2;
+  border-left: 0.28rem solid #6a8f37;
+  border-radius: 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+.fp-showcase .tr-module-status[data-state="loading"] { border-left-color: #667a86; }
+.fp-showcase .tr-module-status[data-state="success"] { color: #28592a; background: #f3f9ee; border-color: #cfe0c4; border-left-color: #4f812e; }
+.fp-showcase .tr-module-status[data-state="error"] { color: #7d2e26; background: #fff4f2; border-color: #e9c2bd; border-left-color: #a64135; }
+.fp-trainer-routines .fp-button-outline { color: #2e3b41; background: #fff; border-color: #aebbc0; }
+.fp-trainer-routines .fp-button-outline:hover:not(:disabled) { color: #17200d; background: #eff6e3; border-color: #7fa644; }
+.fp-trainer-routines .fp-button.is-disabled { color: #68747a; background: #e5eaec; border-color: #d4dcdf; cursor: not-allowed; }
+.fp-trainer-routines .tr-button-danger { color: #822f28; background: #fff; border-color: #d8aaa5; }
+.fp-trainer-routines .tr-button-danger:hover:not(:disabled) { color: #6d241e; background: #fff0ed; border-color: #bf756e; }
+.fp-trainer-routines .tr-routine-list-layout,
+.fp-trainer-routines .tr-routine-detail-layout { display: grid; gap: 1rem; }
+.fp-trainer-routines .tr-routine-toolbar {
+  display: grid;
+  grid-template-columns: minmax(13rem, 1fr) minmax(10rem, 0.35fr) auto;
+  align-items: end;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+.fp-trainer-routines .tr-routine-field { display: grid; min-width: 0; gap: 0.4rem; color: #344148; font-size: 0.74rem; font-weight: 750; }
+.fp-trainer-routines .tr-routine-field > span { display: block; }
+.fp-trainer-routines .tr-routine-field > small { color: #59666c; font-size: 0.65rem; font-weight: 520; line-height: 1.45; }
+.fp-trainer-routines .tr-routine-field input,
+.fp-trainer-routines .tr-routine-field select,
+.fp-trainer-routines .tr-routine-field textarea {
+  width: 100%;
+  min-height: 2.85rem;
+  padding: 0.65rem 0.75rem;
+  color: #172126;
+  background: #fff;
+  border: 1px solid #bdc8cd;
+  border-radius: 0.65rem;
+  font: inherit;
+  line-height: 1.4;
+}
+.fp-trainer-routines .tr-routine-field textarea { min-height: 7rem; resize: vertical; }
+.fp-trainer-routines .tr-routine-field input[readonly] { color: #536067; background: #edf1f2; }
+.fp-trainer-routines .tr-routine-field input:focus-visible,
+.fp-trainer-routines .tr-routine-field select:focus-visible,
+.fp-trainer-routines .tr-routine-field textarea:focus-visible { outline: 3px solid rgb(94 143 30 / 24%); outline-offset: 1px; border-color: #5e8f1e; }
+.fp-trainer-routines .tr-routine-result-heading,
+.fp-trainer-routines .tr-routine-card-top,
+.fp-trainer-routines .tr-panel-heading,
+.fp-trainer-routines .tr-assignment-heading,
+.fp-trainer-routines .tr-heading-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; }
+.fp-trainer-routines .tr-routine-result-heading { padding: 0.45rem 0.1rem 0; }
+.fp-trainer-routines .tr-routine-result-heading h2,
+.fp-trainer-routines .tr-routine-card h2,
+.fp-trainer-routines .tr-routine-summary h2,
+.fp-trainer-routines .tr-panel-heading h2 { margin: 0.2rem 0 0; color: #172126; font-size: clamp(1.15rem, 2.5vw, 1.45rem); font-weight: 790; letter-spacing: -0.04em; }
+.fp-trainer-routines .tr-routine-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+.fp-trainer-routines .tr-routine-card { display: flex; min-width: 0; flex-direction: column; gap: 0.9rem; padding: 1.15rem; }
+.fp-trainer-routines .tr-routine-meta,
+.fp-trainer-routines .tr-assignment-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; margin: 0; }
+.fp-trainer-routines .tr-routine-meta > div,
+.fp-trainer-routines .tr-assignment-values > div { min-width: 0; padding: 0.65rem; background: #f3f6f7; border: 1px solid #e2e8ea; border-radius: 0.62rem; }
+.fp-trainer-routines .tr-routine-meta dt,
+.fp-trainer-routines .tr-assignment-values dt { color: #5b686e; font-size: 0.61rem; font-weight: 780; letter-spacing: 0.06em; text-transform: uppercase; }
+.fp-trainer-routines .tr-routine-meta dd,
+.fp-trainer-routines .tr-assignment-values dd { overflow: hidden; margin: 0.18rem 0 0; color: #202b30; font-size: 0.74rem; font-weight: 700; line-height: 1.4; text-overflow: ellipsis; }
+.fp-trainer-routines .tr-routine-preview { min-height: 2.7em; margin: 0; color: #526168; font-size: 0.72rem; line-height: 1.55; }
+.fp-trainer-routines .tr-routine-actions,
+.fp-trainer-routines .tr-assignment-actions,
+.fp-trainer-routines .tr-form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem; }
+.fp-trainer-routines .tr-routine-actions { margin-top: auto; padding-top: 0.15rem; }
+.fp-trainer-routines .tr-routine-actions .fp-button,
+.fp-trainer-routines .tr-assignment-actions .fp-button { min-height: 2.45rem; padding: 0.52rem 0.75rem; font-size: 0.7rem; }
+.fp-trainer-routines .tr-routine-empty { display: grid; grid-column: 1 / -1; justify-items: start; gap: 0.55rem; padding: 1.35rem; }
+.fp-trainer-routines .tr-routine-empty strong { color: #1d282d; font-size: 0.92rem; }
+.fp-trainer-routines .tr-routine-empty p { max-width: 42rem; margin: 0; color: #56636a; font-size: 0.75rem; line-height: 1.6; }
+.fp-trainer-routines .tr-routine-empty .fp-button { margin-top: 0.35rem; }
+.fp-trainer-routines .tr-routine-editor,
+.fp-trainer-routines .tr-routine-summary,
+.fp-trainer-routines .tr-add-exercise-panel { padding: clamp(1rem, 3vw, 1.5rem); }
+.fp-trainer-routines .tr-routine-form { display: grid; gap: 1.2rem; }
+.fp-trainer-routines .tr-routine-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
+.fp-trainer-routines .tr-field-wide { grid-column: 1 / -1; }
+.fp-trainer-routines .tr-form-actions { justify-content: flex-end; padding-top: 0.25rem; border-top: 1px solid #e5eaec; }
+.fp-trainer-routines .tr-routine-summary { display: grid; gap: 1rem; }
+.fp-trainer-routines .tr-routine-description { margin: 0; color: #46545b; font-size: 0.78rem; line-height: 1.65; }
+.fp-trainer-routines .tr-routine-note { padding: 0.85rem; color: #304122; background: #f0f6e5; border: 1px solid #dbe8c6; border-left: 0.28rem solid #79a73d; border-radius: 0.65rem; }
+.fp-trainer-routines .tr-routine-note strong { display: block; font-size: 0.72rem; }
+.fp-trainer-routines .tr-routine-note p { margin: 0.25rem 0 0; color: #45553a; font-size: 0.72rem; line-height: 1.55; }
+.fp-trainer-routines .tr-inactive-note { padding: 0.75rem; margin: 0; color: #4c5b62; background: #eef2f3; border-radius: 0.62rem; font-size: 0.72rem; line-height: 1.5; }
+.fp-trainer-routines .tr-assignment-section { display: grid; gap: 0.8rem; padding-top: 0.4rem; }
+.fp-trainer-routines .tr-assignment-list { display: grid; gap: 0.7rem; }
+.fp-trainer-routines .tr-assignment-card { display: grid; gap: 0.75rem; padding: 1rem; background: #fff; border: 1px solid #dce3e6; border-radius: 0.85rem; box-shadow: 0 0.5rem 1.3rem rgb(13 15 16 / 4%); }
+.fp-trainer-routines .tr-assignment-heading h3 { margin: 0.14rem 0 0; color: #1b252a; font-size: 0.93rem; letter-spacing: -0.025em; }
+.fp-trainer-routines .tr-assignment-order { color: #557b26; font-size: 0.58rem; font-weight: 850; letter-spacing: 0.1em; }
+.fp-trainer-routines .tr-assignment-dose { padding: 0.38rem 0.6rem; color: #1e3011; background: #eaf3da; border-radius: 999px; font-size: 0.7rem; font-weight: 850; white-space: nowrap; }
+.fp-trainer-routines .tr-assignment-values { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fp-trainer-routines .tr-assignment-actions { padding-top: 0.1rem; }
+.fp-trainer-routines .tr-inline-exercise-form { display: grid; gap: 0.85rem; padding: 0.9rem; background: #f4f7f8; border: 1px solid #dce4e7; border-radius: 0.7rem; }
+.fp-trainer-routines .tr-exercise-form-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.7rem; }
+.fp-trainer-routines .tr-add-exercise-panel { display: grid; gap: 1rem; border-color: #bdcf9d; box-shadow: 0 0.8rem 2rem rgb(65 94 32 / 8%); }
+.fp-trainer-routines .tr-panel-heading { padding-bottom: 0.8rem; border-bottom: 1px solid #e4e9eb; }
+.fp-trainer-routines .tr-catalog-create { padding-top: 0.85rem; border-top: 1px solid #e4e9eb; }
+.fp-trainer-routines .tr-catalog-create summary { color: #315719; font-size: 0.73rem; font-weight: 780; cursor: pointer; }
+.fp-trainer-routines .tr-catalog-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 0.75rem; padding-top: 0.85rem; }
+.fp-trainer-routines .tr-catalog-form label:nth-child(3) { grid-column: 1 / -1; }
+.fp-trainer-routines .tr-catalog-form .fp-button { justify-self: end; }
+
+@media (max-width: 980px) {
+  .fp-trainer-routines .tr-routine-grid { grid-template-columns: 1fr; }
+  .fp-trainer-routines .tr-exercise-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .fp-trainer-routines .tr-routine-toolbar,
+  .fp-trainer-routines .tr-routine-form-grid,
+  .fp-trainer-routines .tr-catalog-form { grid-template-columns: 1fr; }
+  .fp-trainer-routines .tr-routine-toolbar .fp-button { width: 100%; }
+  .fp-trainer-routines .tr-field-wide,
+  .fp-trainer-routines .tr-catalog-form label:nth-child(3) { grid-column: auto; }
+  .fp-trainer-routines .tr-exercise-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fp-trainer-routines .tr-catalog-form .fp-button { width: 100%; justify-self: stretch; }
+}
+@media (max-width: 520px) {
+  .fp-trainer-routines .tr-routine-result-heading,
+  .fp-trainer-routines .tr-routine-card-top,
+  .fp-trainer-routines .tr-panel-heading { align-items: flex-start; flex-direction: column; }
+  .fp-trainer-routines .tr-heading-actions { width: 100%; align-items: stretch; flex-direction: column; }
+  .fp-trainer-routines .tr-routine-meta,
+  .fp-trainer-routines .tr-assignment-values,
+  .fp-trainer-routines .tr-exercise-form-grid { grid-template-columns: 1fr; }
+  .fp-trainer-routines .tr-routine-actions,
+  .fp-trainer-routines .tr-assignment-actions,
+  .fp-trainer-routines .tr-form-actions { align-items: stretch; flex-direction: column; }
+  .fp-trainer-routines .tr-routine-actions .fp-button,
+  .fp-trainer-routines .tr-assignment-actions .fp-button,
+  .fp-trainer-routines .tr-form-actions .fp-button { width: 100%; }
+}
+
+/* Entrenador: módulo independiente de asistencias */
+.fp-showcase.fp-trainer-attendance { background: #eef2f3; }
+.fp-trainer-attendance .fp-breadcrumb a { color: #496047; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 0.2rem; }
+.fp-trainer-attendance .fp-breadcrumb a:hover { color: #294d13; text-decoration-color: currentColor; }
+.fp-trainer-attendance .tr-attendance-page { width: min(100%, 78rem); }
+.fp-trainer-attendance .fp-button-outline { color: #2e3b41; background: #fff; border-color: #aebbc0; }
+.fp-trainer-attendance .fp-button-outline:hover:not(:disabled) { color: #17200d; background: #eff6e3; border-color: #7fa644; }
+.fp-trainer-attendance .tr-attendance-list-layout,
+.fp-trainer-attendance .tr-attendance-detail-layout,
+.fp-trainer-attendance .tr-roster-section { display: grid; gap: 1rem; }
+.fp-trainer-attendance .tr-attendance-toolbar { display: grid; grid-template-columns: minmax(14rem, 0.45fr) minmax(0, 1fr); align-items: end; gap: 1rem; padding: 1rem; }
+.fp-trainer-attendance .tr-module-field { display: grid; gap: 0.4rem; color: #344148; font-size: 0.74rem; font-weight: 750; }
+.fp-trainer-attendance .tr-module-field select { width: 100%; min-height: 2.85rem; padding: 0.65rem 0.75rem; color: #172126; background: #fff; border: 1px solid #bdc8cd; border-radius: 0.65rem; font: inherit; }
+.fp-trainer-attendance .tr-module-field select:focus-visible { outline: 3px solid rgb(94 143 30 / 24%); outline-offset: 1px; border-color: #5e8f1e; }
+.fp-trainer-attendance .tr-toolbar-note { margin: 0; color: #526168; font-size: 0.71rem; line-height: 1.55; }
+.fp-trainer-attendance .tr-module-result-heading,
+.fp-trainer-attendance .tr-class-card-top { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; }
+.fp-trainer-attendance .tr-module-result-heading { padding: 0.45rem 0.1rem 0; }
+.fp-trainer-attendance .tr-module-result-heading h2,
+.fp-trainer-attendance .tr-class-card h2,
+.fp-trainer-attendance .tr-attendance-summary h2 { margin: 0.2rem 0 0; color: #172126; font-size: clamp(1.15rem, 2.5vw, 1.45rem); font-weight: 790; letter-spacing: -0.04em; }
+.fp-trainer-attendance .tr-class-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+.fp-trainer-attendance .tr-class-card { display: flex; min-width: 0; flex-direction: column; gap: 0.9rem; padding: 1.15rem; }
+.fp-trainer-attendance .tr-class-card > .fp-button { align-self: flex-start; margin-top: auto; }
+.fp-trainer-attendance .tr-class-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; margin: 0; }
+.fp-trainer-attendance .tr-class-meta > div { min-width: 0; padding: 0.65rem; background: #f3f6f7; border: 1px solid #e2e8ea; border-radius: 0.62rem; }
+.fp-trainer-attendance .tr-class-meta dt { color: #5b686e; font-size: 0.61rem; font-weight: 780; letter-spacing: 0.06em; text-transform: uppercase; }
+.fp-trainer-attendance .tr-class-meta dd { overflow: hidden; margin: 0.18rem 0 0; color: #202b30; font-size: 0.74rem; font-weight: 700; line-height: 1.4; text-overflow: ellipsis; }
+.fp-trainer-attendance .tr-state-cancelled { color: #7f2e27; background: #fce9e6; }
+.fp-trainer-attendance .tr-state-cancelled > span { width: 0.38rem; height: 0.38rem; background: #aa453b; border-radius: 50%; }
+.fp-trainer-attendance .tr-module-empty { display: grid; grid-column: 1 / -1; justify-items: start; gap: 0.55rem; padding: 1.35rem; }
+.fp-trainer-attendance .tr-module-empty strong { color: #1d282d; font-size: 0.92rem; }
+.fp-trainer-attendance .tr-module-empty p { max-width: 42rem; margin: 0; color: #56636a; font-size: 0.75rem; line-height: 1.6; }
+.fp-trainer-attendance .tr-module-empty .fp-button { margin-top: 0.35rem; }
+.fp-trainer-attendance .tr-attendance-summary { display: grid; gap: 1rem; padding: clamp(1rem, 3vw, 1.5rem); }
+.fp-trainer-attendance .tr-attendance-locked { padding: 0.8rem; margin: 0; color: #694019; background: #fff5df; border: 1px solid #ead2a9; border-left: 0.28rem solid #b27a2c; border-radius: 0.65rem; font-size: 0.72rem; line-height: 1.55; }
+.fp-trainer-attendance .tr-student-list { display: grid; gap: 0.65rem; }
+.fp-trainer-attendance .tr-student-row { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(8rem, 0.35fr) minmax(15rem, auto); align-items: center; gap: 1rem; padding: 0.9rem 1rem; background: #fff; border: 1px solid #dce3e6; border-radius: 0.82rem; box-shadow: 0 0.45rem 1.2rem rgb(13 15 16 / 4%); }
+.fp-trainer-attendance .tr-student-identity { display: flex; min-width: 0; align-items: center; gap: 0.7rem; }
+.fp-trainer-attendance .tr-student-avatar { display: grid; width: 2.25rem; height: 2.25rem; flex: 0 0 2.25rem; place-items: center; color: #18220d; background: var(--fp-lime); border-radius: 50%; font-size: 0.65rem; font-weight: 850; }
+.fp-trainer-attendance .tr-student-identity strong { overflow: hidden; color: #202b30; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+.fp-trainer-attendance .tr-student-current { display: grid; justify-items: start; gap: 0.28rem; }
+.fp-trainer-attendance .tr-student-current small { color: #5a676d; font-size: 0.6rem; font-weight: 720; }
+.fp-trainer-attendance .tr-attendance-badge { display: inline-flex; min-height: 1.65rem; align-items: center; padding: 0.28rem 0.58rem; border-radius: 999px; font-size: 0.66rem; font-weight: 780; }
+.fp-trainer-attendance .tr-attendance-present { color: #28592a; background: #e8f4e7; }
+.fp-trainer-attendance .tr-attendance-absent { color: #7c2f28; background: #fde9e6; }
+.fp-trainer-attendance .tr-attendance-pending { color: #4d5960; background: #edf1f2; }
+.fp-trainer-attendance .tr-attendance-choices { display: grid; grid-template-columns: repeat(2, minmax(6.6rem, 1fr)); gap: 0.5rem; padding: 0; margin: 0; border: 0; }
+.fp-trainer-attendance .tr-attendance-choice { position: relative; display: flex; min-height: 2.65rem; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.55rem 0.7rem; color: #344148; background: #f7f9fa; border: 1px solid #bdc8cd; border-radius: 0.65rem; font-size: 0.71rem; font-weight: 760; cursor: pointer; }
+.fp-trainer-attendance .tr-attendance-choice input { width: 1rem; height: 1rem; margin: 0; accent-color: #5e8f1e; }
+.fp-trainer-attendance .tr-attendance-choice.is-present:has(input:checked) { color: #244d25; background: #e8f4e7; border-color: #6d9b5a; }
+.fp-trainer-attendance .tr-attendance-choice.is-absent:has(input:checked) { color: #713028; background: #fde9e6; border-color: #c2847d; }
+.fp-trainer-attendance .tr-attendance-choices:disabled .tr-attendance-choice { color: #637076; background: #edf1f2; border-color: #d5dde0; cursor: not-allowed; }
+.fp-trainer-attendance .tr-attendance-savebar { position: sticky; z-index: 5; bottom: 0.7rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 1rem; border-color: #bdcf9d; box-shadow: 0 0.9rem 2.2rem rgb(13 15 16 / 14%); }
+.fp-trainer-attendance .tr-attendance-savebar p { margin: 0; color: #445158; font-size: 0.72rem; font-weight: 650; }
+.fp-trainer-attendance .tr-attendance-save-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; }
+
+@media (max-width: 980px) {
+  .fp-trainer-attendance .tr-class-grid { grid-template-columns: 1fr; }
+  .fp-trainer-attendance .tr-student-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .fp-trainer-attendance .tr-attendance-choices { grid-column: 1 / -1; }
+}
+@media (max-width: 650px) {
+  .fp-trainer-attendance .tr-attendance-toolbar,
+  .fp-trainer-attendance .tr-student-row { grid-template-columns: 1fr; }
+  .fp-trainer-attendance .tr-student-current { justify-items: start; }
+  .fp-trainer-attendance .tr-attendance-choices { grid-column: auto; }
+  .fp-trainer-attendance .tr-attendance-savebar { align-items: stretch; flex-direction: column; }
+  .fp-trainer-attendance .tr-attendance-save-actions { display: grid; grid-template-columns: 1fr; }
+  .fp-trainer-attendance .tr-attendance-savebar .fp-button { width: 100%; }
+}
+@media (max-width: 520px) {
+  .fp-trainer-attendance .tr-module-result-heading,
+  .fp-trainer-attendance .tr-class-card-top { align-items: flex-start; flex-direction: column; }
+  .fp-trainer-attendance .tr-class-meta,
+  .fp-trainer-attendance .tr-attendance-choices { grid-template-columns: 1fr; }
+  .fp-trainer-attendance .tr-class-card > .fp-button { width: 100%; }
 }

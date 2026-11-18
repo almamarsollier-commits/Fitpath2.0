@@ -81,6 +81,33 @@ function renderMembershipCatalog(root, payload) {
   mount.replaceChildren(...cards);
 }
 
+function renderMembershipHistory(root, subscriptions) {
+  const mount = root.querySelector("[data-membership-history]");
+  if (!mount) return;
+  if (!subscriptions.length) {
+    mount.replaceChildren(element("p", "cl-payment-empty", "Todavía no tenés membresías registradas."));
+    return;
+  }
+  const list = element("ul", "cl-payment-history-list");
+  for (const subscription of subscriptions) {
+    const row = element("li");
+    const copy = element("span");
+    copy.append(
+      element("strong", "", subscription.nombre),
+      element(
+        "small",
+        "",
+        subscription.fecha_fin
+          ? `${subscription.fecha_inicio} al ${subscription.fecha_fin}`
+          : `Desde ${subscription.fecha_inicio}`
+      )
+    );
+    row.append(copy, statusBadge(subscription.estado));
+    list.append(row);
+  }
+  mount.replaceChildren(list);
+}
+
 function renderDebts(root, debts, checkoutAvailable) {
   const mount = root.querySelector("[data-payment-debts]");
   if (!mount) return;
@@ -187,7 +214,9 @@ export async function initializePayments({ csrfToken }) {
       headers: { Accept: "application/json" }
     });
     if (!response.ok) throw new Error("membership_catalog_failed");
-    renderMembershipCatalog(root, await response.json());
+    const payload = await response.json();
+    renderMembershipCatalog(root, payload);
+    renderMembershipHistory(root, payload.subscriptions || []);
   };
 
   const params = new URLSearchParams(window.location.search);

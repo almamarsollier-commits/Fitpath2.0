@@ -22,7 +22,7 @@ class ActivityClassSchemaTests(unittest.TestCase):
         self.connection = connect_database(self.root / "activities.sqlite3")
         self.addCleanup(self.connection.close)
 
-        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), tuple(range(1, 13)))
+        self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), tuple(range(1, 15)))
         seed_initial_roles(self.connection)
 
         role_id = self.connection.execute(
@@ -188,6 +188,8 @@ class ActivityClassSchemaTests(unittest.TestCase):
                 "intentos_pago",
                 "eventos_webhook_pago",
                 "perfiles_usuario",
+                "autorizaciones_google_calendar",
+                "eventos_google_calendar",
             },
         )
         self.assertEqual(
@@ -210,6 +212,8 @@ class ActivityClassSchemaTests(unittest.TestCase):
                 (10, "0010_cliente_imagen_perfil.sql"),
                 (11, "0011_mercado_pago_intentos.sql"),
                 (12, "0012_perfiles_usuario.sql"),
+                (13, "0013_rutinas_activas.sql"),
+                (14, "0014_google_calendar.sql"),
             ),
         )
         self.assertTrue({"clientes", "inscripciones", "asistencias"}.issubset(tables))
@@ -446,7 +450,7 @@ class ActivityClassSchemaTests(unittest.TestCase):
         self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), ())
         self.assertEqual(
             self.connection.execute("SELECT count(*) FROM schema_migrations").fetchone()[0],
-            12,
+            14,
         )
         self.assertEqual(
             self.connection.execute("PRAGMA foreign_key_check").fetchall(),

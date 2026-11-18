@@ -1,0 +1,21 @@
+{% macro trainer_sidebar(active_module) -%}
+<aside class="fp-sidebar fp-role-sidebar" id="fp-sidebar" aria-label="Navegación del Entrenador">
+  <div class="fp-sidebar-brand">
+    <a class="fp-brand" href="/auth/entrenador"><span class="fp-brand-mark">F</span><span class="fp-brand-word">FIT<span>PATH</span></span><span class="fp-brand-version">2.0</span></a>
+    <button class="fp-icon-button fp-sidebar-close" type="button" aria-label="Cerrar menú" data-menu-close>×</button>
+  </div>
+  <div class="fp-client-side-heading"><span class="fp-client-avatar" aria-hidden="true">FP</span><span><strong>Entrenador</strong><small data-role-user>Cargando sesión…</small></span></div>
+  <nav class="fp-primary-nav fp-client-nav" aria-label="Módulos del Entrenador">
+    <p class="fp-nav-heading">MÓDULOS</p>
+    <a class="fp-nav-link{{ ' is-current' if active_module == 'overview' else '' }}"{% if active_module == 'overview' %} aria-current="page"{% endif %} href="/auth/entrenador"><span>Resumen operativo</span></a>
+    <a class="fp-nav-link{{ ' is-current' if active_module == 'routines' else '' }}"{% if active_module == 'routines' %} aria-current="page"{% endif %} href="/auth/entrenador/rutinas"><span>Mis rutinas</span></a>
+    <a class="fp-nav-link{{ ' is-current' if active_module == 'attendance' else '' }}"{% if active_module == 'attendance' %} aria-current="page"{% endif %} href="/auth/entrenador/asistencias"><span>Asistencias</span></a>
+    <a class="fp-nav-link" href="/auth/entrenador#management"><span>Otras gestiones</span></a>
+    <a class="fp-nav-link" href="/auth/profile"><span>Mi perfil</span></a>
+  </nav>
+  <div class="fp-sidebar-bottom">
+    <form action="/auth/logout" method="post" data-role-logout><input type="hidden" name="csrf_token"><button class="fp-button fp-button-light" type="submit" disabled>Cerrar sesión</button></form>
+    <p class="fp-sidebar-version">FITPATH 2.0 · ENTRENADOR</p>
+  </div>
+</aside>
+{%- endmacro %}

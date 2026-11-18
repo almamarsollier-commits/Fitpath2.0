@@ -99,6 +99,14 @@ No bloquean el MVP visual:
 - Verificación de concurrencia, tiempos de respuesta y disponibilidad: al definir backend y entorno de ejecución.
 - Alcance de archivos en S3 y flujos de Calendar: antes de sus respectivos bloques. El alcance portable de Smart Assistant quedó aprobado y documentado.
 
+### Decisión aprobada para Google Calendar (2026-11-18)
+
+- El login Google existente conserva sus alcances y Calendar usa autorización incremental separada.
+- Sólo el Cliente puede añadir, mediante acción y confirmación explícitas, una inscripción propia activa a su calendario principal.
+- Se solicita `calendar.events.owned`; `openid` se usa únicamente para verificar que la autorización corresponde a la identidad Google vinculada.
+- Cada inscripción tiene un identificador de evento determinista y un único registro local; FitPath no crea eventos automáticos ni sincroniza cancelaciones sin una decisión posterior.
+- Los refresh tokens se cifran con un secreto exclusivo del entorno y nunca se entregan al frontend.
+
 ### Decisiones aprobadas para el esquema del Bloque 2 (2026-11-08)
 
 - sedes no tendrá administrador_id.
@@ -126,13 +134,19 @@ No bloquean el MVP visual:
 - Toda mutación requiere reglas de negocio completas, endpoint autorizado y confirmación explícita. Mientras falte cualquiera de esos controles, se informa como no disponible y no se simula éxito.
 - Un ejecutable autocontenido del backend es un entregable de empaquetado separado; copiar el repositorio a una PC sin Python no ejecuta Flask.
 
+### Permisos por rol y API v1 (implementación vigente al 2026-11-18)
+
+- El seed idempotente asigna permisos explícitos de vistas y datos a los cinco roles. Cada blueprint restringe sesión, rol y permiso; las operaciones de Entrenador, Jefe de sede y Técnico limitan además el acceso a recursos de su alcance.
+- Los permisos respaldan endpoints existentes; no implican acceso global del Administrador a datos privados ni autorizan operaciones fuera de las reglas de negocio implementadas.
+- Las pruebas de `test_role_apis.py` cubren permisos y aislamiento por rol/sede. Las funciones no aprobadas o sin reglas completas, como mutaciones del asistente, permanecen deshabilitadas.
+
 ### Imágenes de perfil privadas en AWS S3 (2026-11-16)
 
 - El primer caso de uso S3 aprobado es la imagen de perfil del Cliente autenticado.
 - Se admiten JPEG, PNG y WebP de hasta 5 MiB, validados por contenido real y MIME declarado.
 - SQLite conserva solamente la clave opaca del objeto; el bucket permanece privado y el navegador recibe URLs prefirmadas con vigencia máxima de 15 minutos.
 - Las claves se aíslan por `clientes/{id}/perfil`; la API comprueba sesión, rol, permiso, propiedad y CSRF antes de modificar la referencia.
-- Bucket, región y credenciales se configuran fuera del repositorio. La validación contra AWS queda pendiente mientras no exista configuración local.
+- Bucket, región y credenciales se configuran fuera del repositorio. El equipo reportó una validación real satisfactoria contra el bucket de desarrollo; esta revisión no repitió llamadas a AWS.
 
 ### Checkout Pro de Mercado Pago en modo de prueba (2026-11-16)
 

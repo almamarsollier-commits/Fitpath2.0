@@ -11,7 +11,7 @@ from backend.fitpath.seeds import seed_initial_roles
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS_DIR = REPOSITORY_ROOT / "backend" / "fitpath" / "migrations"
-MIGRATION_VERSIONS = tuple(range(1, 13))
+MIGRATION_VERSIONS = tuple(range(1, 15))
 
 
 class AccountProfileApiTests(unittest.TestCase):

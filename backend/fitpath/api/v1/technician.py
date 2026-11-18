@@ -63,10 +63,10 @@ def _dashboard_payload(profile):
                    t.fecha_generacion_utc, t.descripcion, t.estado
             FROM tickets_mantenimiento t
             JOIN maquinas m ON m.id_maquina = t.maquina_id
-            WHERE t.tecnico_id = ?
+            WHERE t.tecnico_id = ? AND m.sede_id = ?
             ORDER BY t.fecha_generacion_utc DESC, t.id_ticket DESC
             """,
-            (profile["id_tecnico"],),
+            (profile["id_tecnico"], profile["sede_id"]),
         ).fetchall()
     ]
     history = [
@@ -78,10 +78,10 @@ def _dashboard_payload(profile):
                    h.estado_nuevo, h.descripcion
             FROM historial_mantenimiento h
             JOIN maquinas m ON m.id_maquina = h.maquina_id
-            WHERE h.tecnico_id = ?
+            WHERE h.tecnico_id = ? AND m.sede_id = ?
             ORDER BY h.fecha_utc DESC, h.id_historial DESC LIMIT 100
             """,
-            (profile["id_tecnico"],),
+            (profile["id_tecnico"], profile["sede_id"]),
         ).fetchall()
     ]
     return {
@@ -160,8 +160,16 @@ def update_ticket(ticket_id):
         return jsonify({"error": "invalid_request"}), 400
     connection = get_db()
     cursor = connection.execute(
-        "UPDATE tickets_mantenimiento SET estado = ? WHERE id_ticket = ? AND tecnico_id = ?",
-        (payload["estado"], ticket_id, profile["id_tecnico"]),
+        """
+        UPDATE tickets_mantenimiento SET estado = ?
+        WHERE id_ticket = ? AND tecnico_id = ?
+          AND EXISTS (
+            SELECT 1 FROM maquinas m
+            WHERE m.id_maquina = tickets_mantenimiento.maquina_id
+              AND m.sede_id = ?
+          )
+        """,
+        (payload["estado"], ticket_id, profile["id_tecnico"], profile["sede_id"]),
     )
     connection.commit()
     if cursor.rowcount != 1:

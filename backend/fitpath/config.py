@@ -26,6 +26,14 @@ class BaseConfig:
     GOOGLE_REDIRECT_URI = os.environ.get(
         "GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback"
     )
+    GOOGLE_CALENDAR_REDIRECT_URI = os.environ.get(
+        "GOOGLE_CALENDAR_REDIRECT_URI",
+        "http://localhost:5000/auth/google/calendar/callback",
+    )
+    GOOGLE_CALENDAR_TOKEN_SECRET = os.environ.get("GOOGLE_CALENDAR_TOKEN_SECRET")
+    GOOGLE_CALENDAR_TIMEOUT_SECONDS = os.environ.get(
+        "GOOGLE_CALENDAR_TIMEOUT_SECONDS", "10"
+    )
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = True

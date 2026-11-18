@@ -20,6 +20,10 @@ class ClientNotFoundError(EnrollmentError):
     """No existe el perfil de cliente solicitado."""
 
 
+class ActiveMembershipRequiredError(EnrollmentError):
+    """El cliente no tiene una membresía activa y vigente."""
+
+
 class ClassNotFoundError(EnrollmentError):
     """No existe la clase solicitada."""
 
@@ -61,12 +65,11 @@ def _rollback_if_needed(connection):
 
 
 def create_enrollment(connection, cliente_id, clase_id):
-    """Crea una inscripción interna, no una reserva completamente autorizada.
+    """Crea una inscripción interna para un cliente con membresía vigente.
 
-    Comprueba cliente, clase futura programada, actividad habilitada, vínculo
-    activo del entrenador, duplicado activo y cupo. No evalúa membresías ni
-    autentica ni autoriza al solicitante; no debe exponerse por HTTP o el selector
-    demo hasta implementar esos controles.
+    Comprueba cliente, membresía activa, clase futura programada, actividad
+    habilitada, vínculo activo del entrenador, duplicado activo y cupo. La capa
+    HTTP continúa siendo responsable de autenticar y autorizar al solicitante.
     """
     _positive_identifier(cliente_id, "cliente_id")
     _positive_identifier(clase_id, "clase_id")
@@ -91,6 +94,24 @@ def create_enrollment(connection, cliente_id, clase_id):
         ).fetchone()
         if client is None:
             raise ClientNotFoundError("No existe el perfil de cliente.")
+
+        today_utc = datetime.now(timezone.utc).date().isoformat()
+        active_membership = connection.execute(
+            """
+            SELECT id_cliente_membresia
+            FROM cliente_membresia
+            WHERE cliente_id = ?
+              AND estado = 'activa'
+              AND fecha_inicio <= ?
+              AND (fecha_fin IS NULL OR fecha_fin >= ?)
+            LIMIT 1
+            """,
+            (cliente_id, today_utc, today_utc),
+        ).fetchone()
+        if active_membership is None:
+            raise ActiveMembershipRequiredError(
+                "Se requiere una membresía activa y vigente para inscribirse."
+            )
 
         scheduled_class = connection.execute(
             """

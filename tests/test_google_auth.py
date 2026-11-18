@@ -18,7 +18,7 @@ from joserfc.jwk import RSAKey
 
 from backend.fitpath import create_app
 from backend.fitpath.auth import GOOGLE_ISSUER
-from backend.fitpath.auth.client_views import CLIENT_VIEW_PATHS
+from backend.fitpath.auth.client_views import CLIENT_VIEW_PATHS, CLIENT_VIEW_REDIRECTS
 from backend.fitpath.auth.demo import create_demo_client, create_local_client
 from backend.fitpath.auth.provision import approve_link
 from backend.fitpath.config import BaseConfig
@@ -48,7 +48,7 @@ class GoogleAuthTests(unittest.TestCase):
         self.addCleanup(self.db.close)
         self.assertEqual(
             apply_migrations(self.db, self.app.config["MIGRATIONS_DIR"]),
-            tuple(range(1, 13)),
+            tuple(range(1, 15)),
         )
         seed_initial_roles(self.db)
         self.db.execute(
@@ -202,7 +202,7 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertNotIn(b"Ana P\xc3\xa9rez", logged_out_page.data)
         self.assertNotIn(b"ID FitPath", logged_out_page.data)
 
-    def test_client_home_protects_demo_views_and_serves_navigation_assets(self):
+    def test_client_home_protects_views_redirects_and_navigation_assets(self):
         self.assertEqual(self.client.get("/auth/cliente").status_code, 302)
         self.assertEqual(
             self.client.get("/templates/cliente/inicio/resumen.html").status_code,
@@ -221,7 +221,9 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertIn("no-store", dashboard.headers["Cache-Control"])
         dashboard.close()
 
-        self.assertEqual(len(CLIENT_VIEW_PATHS), 7)
+        self.assertEqual(len(CLIENT_VIEW_PATHS), 15)
+        expected_redirects = {}
+        self.assertEqual(CLIENT_VIEW_REDIRECTS, expected_redirects)
         linked_paths = set()
         for relative_path in CLIENT_VIEW_PATHS:
             page = self.client.get(f"/templates/cliente/{relative_path}")
@@ -231,10 +233,18 @@ class GoogleAuthTests(unittest.TestCase):
                 "perfil/membresia.html": b"modo prueba",
                 "perfil/index.html": b"perfil personal",
                 "inicio/resumen.html": b"datos propios",
+                "inicio/actividad.html": b"actividad propia",
+                "inicio/proxima-clase.html": b"reserva propia",
                 "clases/index.html": b"datos persistidos",
+                "clases/detalle.html": b"datos confirmados",
                 "clases/reservas.html": b"historial real",
                 "rutina/semana.html": b"plan asignado",
+                "rutina/entrenamiento.html": b"detalle de rutina",
+                "rutina/ejercicio.html": b"detalle de ejercicio",
                 "progreso/index.html": b"seguimiento privado",
+                "progreso/evolucion.html": b"historial privado",
+                "alimentacion/index.html": b"planes de alimentaci",
+                "alimentacion/detalle.html": b"detalle del plan obtenido",
             }
             expected_marker = markers[relative_path]
             self.assertIn(expected_marker, page.data.lower(), relative_path)
@@ -243,6 +253,26 @@ class GoogleAuthTests(unittest.TestCase):
                 if path.startswith(("/templates/cliente/", "/templates/landing.html", "/statics/")):
                     linked_paths.add(path)
             page.close()
+
+        for obsolete_path, target_path in expected_redirects.items():
+            response = self.client.get(f"/templates/cliente/{obsolete_path}")
+            self.assertEqual(response.status_code, 302, obsolete_path)
+            self.assertEqual(
+                response.location,
+                f"/templates/cliente/{target_path}",
+                obsolete_path,
+            )
+            self.assertIn("private", response.headers["Cache-Control"])
+            self.assertIn("no-store", response.headers["Cache-Control"])
+            target = self.client.get(response.location)
+            self.assertEqual(target.status_code, 200, target_path)
+            target.close()
+            response.close()
+
+        self.assertEqual(
+            self.client.get("/templates/cliente/no-existe.html").status_code,
+            404,
+        )
 
         for path in sorted(linked_paths):
             resource = self.client.get(path)
@@ -263,6 +293,16 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertIn(b'fetch("/auth/me"', shell.data)
         self.assertIn(b'fetch("/auth/logout"', shell.data)
         self.assertIn(b"Cerrar sesi", shell.data)
+        for obsolete_path in expected_redirects:
+            self.assertNotIn(obsolete_path.encode(), shell.data)
+        self.assertIn(b"/templates/cliente/rutina/entrenamiento.html", shell.data)
+        self.assertIn(b"/templates/cliente/rutina/ejercicio.html", shell.data)
+        self.assertIn(b"/templates/cliente/inicio/actividad.html", shell.data)
+        self.assertIn(b"/templates/cliente/inicio/proxima-clase.html", shell.data)
+        self.assertIn(b"/templates/cliente/clases/detalle.html", shell.data)
+        self.assertIn(b"/templates/cliente/progreso/evolucion.html", shell.data)
+        self.assertIn(b"/templates/cliente/alimentacion/index.html", shell.data)
+        self.assertIn(b"/templates/cliente/alimentacion/detalle.html", shell.data)
         shell.close()
 
         identity = self.client.get("/auth/me")
@@ -274,7 +314,7 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertEqual(logout.location, "/auth/login?logout=1")
         self.assertEqual(self.client.get("/auth/me").status_code, 401)
         self.assertEqual(self.client.get("/auth/cliente").status_code, 302)
-        for relative_path in CLIENT_VIEW_PATHS:
+        for relative_path in (*CLIENT_VIEW_PATHS, *CLIENT_VIEW_REDIRECTS):
             denied = self.client.get(f"/templates/cliente/{relative_path}")
             self.assertEqual(denied.status_code, 302, relative_path)
             self.assertEqual(denied.location, "/auth/login")
@@ -297,6 +337,14 @@ class GoogleAuthTests(unittest.TestCase):
             self.client.get("/templates/cliente/inicio/resumen.html").status_code,
             403,
         )
+        self.assertEqual(
+            self.client.get("/templates/cliente/inicio/actividad.html").status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get("/templates/cliente/rutina/ejercicio.html").status_code,
+            403,
+        )
 
     def test_client_home_requires_persisted_permission(self):
         self.callback(self.valid_token())
@@ -306,6 +354,14 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertEqual(self.client.get("/auth/cliente").status_code, 403)
         self.assertEqual(
             self.client.get("/templates/cliente/inicio/resumen.html").status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get("/templates/cliente/inicio/actividad.html").status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get("/templates/cliente/rutina/ejercicio.html").status_code,
             403,
         )
 

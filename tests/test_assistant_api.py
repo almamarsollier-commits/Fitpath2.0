@@ -16,6 +16,12 @@ from backend.fitpath.seeds import (
 )
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+WIDGET_SCRIPT = REPOSITORY_ROOT / "statics" / "js" / "assistant" / "widget.js"
+CLIENT_SCRIPT = REPOSITORY_ROOT / "statics" / "js" / "assistant" / "fitpath-client.js"
+ENGINE_SCRIPT = REPOSITORY_ROOT / "statics" / "js" / "assistant" / "conversation-engine.js"
+
+
 class AssistantApiTests(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
@@ -189,7 +195,8 @@ class AssistantApiTests(unittest.TestCase):
         self.assertEqual(len(classes.json["classes"]), 1)
         self.assertEqual(classes.json["classes"][0]["id"], self.class_id)
         self.assertEqual(classes.json["classes"][0]["available_spots"], 1)
-        self.assertFalse(classes.json["classes"][0]["enrollment_available"])
+        self.assertTrue(classes.json["classes"][0]["enrollment_available"])
+        self.assertFalse(classes.json["classes"][0]["enrolled"])
         self.assertNotIn("trainer", classes.json["classes"][0])
 
         routine = self.client.get("/api/v1/assistant/routine").json["routine"]
@@ -201,19 +208,66 @@ class AssistantApiTests(unittest.TestCase):
         self.assertEqual(membership["id"], self.membership_record_id)
         self.assertEqual(membership["name"], "Premium real")
 
-    def test_capabilities_disable_unvalidated_mutations_and_no_data_changes(self):
+    def test_capabilities_enable_confirmable_owned_enrollment_mutations(self):
         self._authenticate()
         capabilities = self.client.get("/api/v1/assistant/capabilities")
         self.assertEqual(capabilities.status_code, 200)
-        self.assertEqual(capabilities.json["write"], [])
-        self.assertIn("enrollments.create", capabilities.json["disabled"])
+        self.assertEqual(
+            capabilities.json["write"],
+            ["enrollments.create", "enrollments.cancel"],
+        )
+        self.assertEqual(capabilities.json["disabled"], [])
         before = self.db.execute("SELECT count(*) FROM inscripciones").fetchone()[0]
-        response = self.client.post(
+        missing_csrf = self.client.post(
             "/api/v1/assistant/enrollments", json={"clase_id": self.class_id}
         )
-        self.assertIn(response.status_code, (404, 405))
-        after = self.db.execute("SELECT count(*) FROM inscripciones").fetchone()[0]
-        self.assertEqual(after, before)
+        self.assertEqual(missing_csrf.status_code, 400)
+        self.assertEqual(
+            self.db.execute("SELECT count(*) FROM inscripciones").fetchone()[0],
+            before,
+        )
+        response = self.client.post(
+            "/api/v1/assistant/enrollments",
+            json={"clase_id": self.class_id},
+            headers={"X-CSRF-Token": "assistant-api-csrf"},
+        )
+        self.assertEqual(response.status_code, 201)
+        enrollment_id = response.json["enrollment"]["id"]
+        self.assertEqual(
+            self.client.post(
+                "/api/v1/assistant/enrollments",
+                json={"clase_id": self.class_id},
+                headers={"X-CSRF-Token": "assistant-api-csrf"},
+            ).status_code,
+            409,
+        )
+        cancelled = self.client.delete(
+            f"/api/v1/assistant/enrollments/{self.class_id}",
+            headers={"X-CSRF-Token": "assistant-api-csrf"},
+        )
+        self.assertEqual(cancelled.status_code, 200)
+        self.assertEqual(
+            self.db.execute(
+                "SELECT estado FROM inscripciones WHERE id_inscripcion = ?",
+                (enrollment_id,),
+            ).fetchone()[0],
+            "cancelada",
+        )
+
+    def test_widget_contract_supports_controls_and_keeps_writes_guarded(self):
+        widget = WIDGET_SCRIPT.read_text(encoding="utf-8")
+        client = CLIENT_SCRIPT.read_text(encoding="utf-8")
+        engine = ENGINE_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('launcher.addEventListener("click"', widget)
+        self.assertIn('close.addEventListener("click"', widget)
+        self.assertIn('form.addEventListener("submit"', widget)
+        self.assertIn("sendMessage", widget)
+        for endpoint in ("classes", "routine", "progress", "membership"):
+            self.assertIn(f'/api/v1/assistant/{endpoint}', client)
+        self.assertIn('this.client.capabilities', engine)
+        self.assertIn('disabled?.includes(intent.operation)', engine)
+        self.assertIn("active_membership_required", engine)
+        self.assertIn('confirmationRequired: true', engine)
 
 
 if __name__ == "__main__":

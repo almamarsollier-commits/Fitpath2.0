@@ -169,20 +169,22 @@
   const application = [
     { id: "app_classes", title: "Clases", category: "fitpath", operation: "classes.list", keywords: ["ver clases", "consultar clases", "clases disponibles", "horarios de clases", "hay cupo"], suggestions: ["Ver mis reservas", "Ir a clases", "Inscribirme a una clase"] },
     { id: "app_enroll", title: "Inscripción", category: "fitpath", operation: "enrollments.create", mutation: true, keywords: ["inscribirme", "inscribir a clase", "reservar clase", "anotarme a clase"], suggestions: ["Ver clases disponibles", "Mis reservas"] },
-    { id: "app_cancel", title: "Cancelar inscripción", category: "fitpath", operation: "enrollments.cancel", mutation: true, keywords: ["cancelar inscripcion", "cancelar reserva", "dar de baja clase"], suggestions: ["Ver mis reservas", "Ver clases"] },
+    { id: "app_cancel", title: "Cancelar inscripción", category: "fitpath", operation: "enrollments.cancel", mutation: true, keywords: ["cancelar inscripcion", "cancelar reserva", "dar de baja clase", "borrar reserva"], suggestions: ["Ver mis reservas", "Ver clases"] },
     { id: "app_routine", title: "Mi rutina", category: "fitpath", operation: "routine.get", keywords: ["mi rutina", "consultar rutina", "entrenamiento asignado"], suggestions: ["Ir a mi rutina", "Ver progreso"] },
     { id: "app_progress", title: "Mi progreso", category: "fitpath", operation: "progress.get", keywords: ["mi progreso", "consultar progreso", "ver evolucion", "mis objetivos"], suggestions: ["Ir a progreso", "Mi rutina"] },
     { id: "app_membership", title: "Mi membresía", category: "fitpath", operation: "membership.get", keywords: ["mi membresia", "consultar membresia", "plan actual", "membresia activa"], suggestions: ["Ir a mi perfil", "Ver clases"] },
     { id: "navigate_classes", title: "Abrir clases", category: "navegacion", route: "/templates/cliente/clases/index.html", keywords: ["ir a clases", "abrir clases", "navegar a clases"] },
     { id: "navigate_routine", title: "Abrir rutina", category: "navegacion", route: "/templates/cliente/rutina/semana.html", keywords: ["ir a mi rutina", "abrir rutina", "navegar a rutina"] },
     { id: "navigate_progress", title: "Abrir progreso", category: "navegacion", route: "/templates/cliente/progreso/index.html", keywords: ["ir a progreso", "abrir progreso", "navegar a progreso"] },
+    { id: "navigate_reservations", title: "Abrir mis reservas", category: "navegacion", route: "/templates/cliente/clases/reservas.html", keywords: ["mis reservas", "ver mis reservas", "abrir reservas", "mis inscripciones"] },
+    { id: "navigate_nutrition", title: "Abrir mi alimentación", category: "navegacion", route: "/templates/cliente/alimentacion/index.html", keywords: ["mi alimentacion", "ver plan alimentacion", "abrir alimentacion", "mi plan de comidas"] },
     { id: "navigate_profile", title: "Abrir perfil", category: "navegacion", route: "/templates/cliente/perfil/index.html", keywords: ["ir a mi perfil", "abrir perfil", "navegar a perfil"] }
   ];
 
   assistant.knowledge = Object.freeze({
     fitness: Object.freeze(fitness.map(Object.freeze)),
     application: Object.freeze(application.map(Object.freeze)),
-    safetyKeywords: Object.freeze(["dolor fuerte", "dolor agudo", "lesion", "diagnostico", "tratamiento", "medicacion", "trastorno alimentario", "desmayo", "dolor de pecho"]),
+    safetyKeywords: Object.freeze(["dolor fuerte", "dolor agudo", "lesion", "diagnostico", "tratamiento", "medicacion", "trastorno alimentario", "desmayo", "dolor de pecho", "falta de aire", "mareo intenso", "palpitaciones"]),
     greetings: Object.freeze(["¡Hola! Soy el Asistente de IA de FitPath. Puedo orientarte sobre entrenamiento y nutrición general, o ayudarte a navegar FitPath.", "¡Hola! ¿Querés hablar de entrenamiento, alimentación o de alguna función de FitPath?"]),
     fallbacks: Object.freeze([
       "No tengo suficiente contexto para responder eso con seguridad. Puedo ayudarte con entrenamiento, nutrición general o navegación por FitPath.",

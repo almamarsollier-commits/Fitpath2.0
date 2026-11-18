@@ -26,7 +26,7 @@ class ObjectiveRoutineSchemaTests(unittest.TestCase):
         self.addCleanup(self.connection.close)
         self.assertEqual(
             apply_migrations(self.connection, MIGRATIONS_DIR),
-            tuple(range(1, 13)),
+            tuple(range(1, 15)),
         )
         seed_initial_roles(self.connection)
         self.client_role_id = self.role_id("Cliente")
@@ -300,6 +300,28 @@ class ObjectiveRoutineSchemaTests(unittest.TestCase):
                 with self.assertRaises(sqlite3.IntegrityError):
                     self.connection.execute(statement, (identifier,))
 
+    def test_routines_default_active_and_reject_physical_deletion(self):
+        routine_id = self.create_routine()
+        self.assertEqual(
+            self.connection.execute(
+                "SELECT activa FROM rutinas WHERE id_rutina = ?", (routine_id,)
+            ).fetchone()[0],
+            1,
+        )
+        self.connection.execute(
+            "UPDATE rutinas SET activa = 0 WHERE id_rutina = ?", (routine_id,)
+        )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.connection.execute(
+                "DELETE FROM rutinas WHERE id_rutina = ?", (routine_id,)
+            )
+        self.assertEqual(
+            self.connection.execute(
+                "SELECT activa FROM rutinas WHERE id_rutina = ?", (routine_id,)
+            ).fetchone()[0],
+            0,
+        )
+
     def test_invalid_routine_exercise_parameters_and_duplicate_order_are_rejected(self):
         routine_id = self.create_routine()
         exercise_id = self.create_exercise()
@@ -332,14 +354,14 @@ class ObjectiveRoutineSchemaTests(unittest.TestCase):
         with self.assertRaises(sqlite3.IntegrityError):
             self.add_routine_exercise(routine_id, 999999, order=2)
 
-    def test_migrations_are_idempotent_and_registry_has_ten_versions(self):
+    def test_migrations_are_idempotent_and_registry_has_all_versions(self):
         self.connection.commit()
         self.assertEqual(apply_migrations(self.connection, MIGRATIONS_DIR), ())
         self.assertEqual(
             self.connection.execute(
                 "SELECT count(*) FROM schema_migrations"
             ).fetchone()[0],
-            12,
+            14,
         )
         self.assertEqual(
             self.connection.execute("PRAGMA foreign_key_check").fetchall(), []

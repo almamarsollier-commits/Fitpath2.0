@@ -23,7 +23,7 @@ GOOGLE_REDIRECT_URI=http://localhost:5000/auth/google/callback
 Podés generar una nueva `FLASK_SECRET_KEY` local sin usar servicios externos:
 
 ```powershell
-& ".\Fithpad2.0\.venv\Scripts\python.exe" -c "import secrets; print(secrets.token_urlsafe(48))"
+& ".\.venv\Scripts\python.exe" -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
 Pegá el resultado directamente en `.env`; no lo envíes por chat ni lo agregues
@@ -41,7 +41,7 @@ No hace falta agregar un origen JavaScript para este flujo de servidor. Google p
 En PowerShell, desde la raíz del clon actual:
 
 ```powershell
-$python = ".\Fithpad2.0\.venv\Scripts\python.exe"
+$python = ".\.venv\Scripts\python.exe"
 $env:FLASK_SECRET_KEY = "$(& $python -c 'import secrets; print(secrets.token_urlsafe(48))')"
 $env:GOOGLE_CLIENT_ID = "<ID del cliente web>"
 $env:GOOGLE_CLIENT_SECRET = "<secreto del cliente web>"

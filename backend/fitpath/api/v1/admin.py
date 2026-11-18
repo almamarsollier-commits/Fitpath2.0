@@ -12,6 +12,7 @@ from ...permissions import (
     ADMIN_VIEWS_PERMISSION,
     INITIAL_ROLE_PERMISSIONS,
 )
+from ...services.schedules import validate_timezone_name
 from .role_utils import (
     bounded_integer,
     clean_text,
@@ -27,6 +28,7 @@ admin_required = require_api_access(
 )
 USERNAME_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])?$")
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+MACHINE_STATES = {"operativa", "en_reparacion", "fuera_de_servicio"}
 
 
 @admin_api_blueprint.after_request
@@ -36,17 +38,32 @@ def disable_private_cache(response):
 
 
 def _users(connection):
-    return [
+    users = [
         dict(row)
         for row in connection.execute(
             """
             SELECT u.id_usuario AS id, u.nombre, u.apellido, u.nombre_usuario,
-                   u.email, u.activo, r.id_rol AS rol_id, r.nombre AS rol
+                   u.email, u.activo, r.id_rol AS rol_id, r.nombre AS rol,
+                   (SELECT e.especialidad FROM entrenadores e
+                    WHERE e.usuario_id = u.id_usuario) AS especialidad,
+                   COALESCE(
+                     (SELECT es.sede_id FROM entrenadores e
+                      JOIN entrenador_sede es ON es.entrenador_id = e.id_entrenador
+                      WHERE e.usuario_id = u.id_usuario
+                      ORDER BY es.activo DESC, es.sede_id LIMIT 1),
+                     (SELECT j.sede_id FROM jefes_sede j
+                      WHERE j.usuario_id = u.id_usuario),
+                     (SELECT t.sede_id FROM tecnicos_mantenimiento t
+                      WHERE t.usuario_id = u.id_usuario)
+                   ) AS sede_id
             FROM usuarios u JOIN roles r ON r.id_rol = u.rol_id
             ORDER BY u.apellido, u.nombre, u.id_usuario
             """
         ).fetchall()
     ]
+    for user in users:
+        user["activo"] = bool(user["activo"])
+    return users
 
 
 def _sites(connection):
@@ -75,7 +92,7 @@ def _activities(connection):
 
 
 def _memberships(connection):
-    return [
+    memberships = [
         dict(row)
         for row in connection.execute(
             """
@@ -88,10 +105,59 @@ def _memberships(connection):
             """
         ).fetchall()
     ]
+    for membership in memberships:
+        benefits = connection.execute(
+            """
+            SELECT b.id_beneficio AS id, b.nombre
+            FROM membresia_beneficio mb
+            JOIN beneficios b ON b.id_beneficio = mb.beneficio_id
+            WHERE mb.membresia_id = ?
+            ORDER BY b.nombre, b.id_beneficio
+            """,
+            (membership["id"],),
+        ).fetchall()
+        membership["beneficio_ids"] = [benefit["id"] for benefit in benefits]
+        membership["beneficios"] = " · ".join(benefit["nombre"] for benefit in benefits)
+    return memberships
+
+
+def _benefits(connection):
+    return [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT b.id_beneficio AS id, b.nombre, b.descripcion,
+                   count(mb.membresia_id) AS membresias
+            FROM beneficios b
+            LEFT JOIN membresia_beneficio mb ON mb.beneficio_id = b.id_beneficio
+            GROUP BY b.id_beneficio
+            ORDER BY b.nombre, b.id_beneficio
+            """
+        ).fetchall()
+    ]
 
 
 def _roles(connection):
-    return [dict(row) for row in connection.execute("SELECT id_rol AS id, nombre FROM roles ORDER BY id_rol")]
+    roles = [
+        dict(row)
+        for row in connection.execute(
+            "SELECT id_rol AS id, nombre FROM roles ORDER BY id_rol"
+        )
+    ]
+    for role in roles:
+        permissions = connection.execute(
+            """
+            SELECT p.id_permiso AS id, p.clave
+            FROM rol_permiso rp
+            JOIN permisos p ON p.id_permiso = rp.permiso_id
+            WHERE rp.rol_id = ?
+            ORDER BY p.clave
+            """,
+            (role["id"],),
+        ).fetchall()
+        role["permission_ids"] = [permission["id"] for permission in permissions]
+        role["permissions"] = " · ".join(permission["clave"] for permission in permissions)
+    return roles
 
 
 def _permissions(connection):
@@ -101,6 +167,56 @@ def _permissions(connection):
             "SELECT id_permiso AS id, clave, descripcion FROM permisos ORDER BY clave"
         )
     ]
+
+
+def _maintenance(connection):
+    machines = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT m.id_maquina AS id, s.nombre AS sede, m.tipo, m.estado,
+                   (SELECT count(*) FROM tickets_mantenimiento t
+                    WHERE t.maquina_id = m.id_maquina
+                      AND t.estado IN ('abierto', 'en_proceso')) AS tickets_abiertos
+            FROM maquinas m
+            JOIN sedes s ON s.id_sede = m.sede_id
+            ORDER BY s.nombre, m.tipo, m.id_maquina
+            """
+        ).fetchall()
+    ]
+    tickets = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT t.id_ticket AS id, s.nombre AS sede, m.tipo AS maquina,
+                   u.nombre || ' ' || u.apellido AS tecnico,
+                   t.fecha_generacion_utc, t.descripcion, t.estado
+            FROM tickets_mantenimiento t
+            JOIN maquinas m ON m.id_maquina = t.maquina_id
+            JOIN sedes s ON s.id_sede = m.sede_id
+            JOIN tecnicos_mantenimiento tm ON tm.id_tecnico = t.tecnico_id
+            JOIN usuarios u ON u.id_usuario = tm.usuario_id
+            ORDER BY t.fecha_generacion_utc DESC, t.id_ticket DESC
+            LIMIT 100
+            """
+        ).fetchall()
+    ]
+    history = [
+        dict(row)
+        for row in connection.execute(
+            """
+            SELECT h.id_historial AS id, s.nombre AS sede, m.tipo AS maquina,
+                   h.ticket_id, h.fecha_utc, h.estado_anterior,
+                   h.estado_nuevo, h.descripcion
+            FROM historial_mantenimiento h
+            JOIN maquinas m ON m.id_maquina = h.maquina_id
+            JOIN sedes s ON s.id_sede = m.sede_id
+            ORDER BY h.fecha_utc DESC, h.id_historial DESC
+            LIMIT 100
+            """
+        ).fetchall()
+    ]
+    return machines, tickets, history
 
 
 def _report(connection):
@@ -132,6 +248,9 @@ def admin_dashboard():
     sites = _sites(connection)
     activities = _activities(connection)
     memberships = _memberships(connection)
+    benefits = _benefits(connection)
+    roles = _roles(connection)
+    machines, tickets, maintenance_history = _maintenance(connection)
     report = _report(connection)
     return jsonify(
         {
@@ -144,13 +263,34 @@ def admin_dashboard():
                 {"title": "Usuarios", "rows": users},
                 {"title": "Sedes", "rows": sites},
                 {"title": "Actividades", "rows": activities},
-                {"title": "Membresías", "rows": memberships},
+                {
+                    "title": "Membresías",
+                    "rows": [
+                        {key: value for key, value in membership.items() if key != "beneficio_ids"}
+                        for membership in memberships
+                    ],
+                },
+                {"title": "Beneficios", "rows": benefits},
+                {
+                    "title": "Roles y permisos",
+                    "rows": [
+                        {key: value for key, value in role.items() if key != "permission_ids"}
+                        for role in roles
+                    ],
+                },
+                {"title": "Máquinas", "rows": machines},
+                {"title": "Tickets de mantenimiento", "rows": tickets},
+                {"title": "Historial de mantenimiento", "rows": maintenance_history},
                 {"title": "Reporte operativo", "rows": [report]},
             ],
             "options": {
-                "roles": _roles(connection),
+                "roles": roles,
                 "permissions": _permissions(connection),
+                "users": users,
+                "activities": activities,
                 "sites": sites,
+                "memberships": memberships,
+                "benefits": benefits,
             },
         }
     )
@@ -375,6 +515,7 @@ def create_site():
     try:
         require_json_fields(payload, {"nombre", "direccion", "zona_horaria"}, {"nombre", "direccion", "zona_horaria"})
         values = tuple(clean_text(payload[key], key, maximum=160) for key in ("nombre", "direccion", "zona_horaria"))
+        validate_timezone_name(values[2])
     except ValueError as validation_error:
         return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
     connection = get_db()
@@ -400,6 +541,8 @@ def update_site(site_id):
         if not payload:
             raise ValueError("request")
         values = {key: clean_text(value, key, maximum=160) for key, value in payload.items()}
+        if "zona_horaria" in values:
+            validate_timezone_name(values["zona_horaria"])
     except ValueError as validation_error:
         return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
     assignments = ", ".join(f"{field} = ?" for field in values)
@@ -415,6 +558,55 @@ def update_site(site_id):
     if cursor.rowcount != 1:
         return jsonify({"error": "site_not_found"}), 404
     return jsonify({"site": {"id": site_id, **values}})
+
+
+@admin_api_blueprint.post("/machines")
+@admin_required
+def create_machine():
+    if not csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    payload = request.get_json(silent=True)
+    try:
+        require_json_fields(
+            payload,
+            {"sede_id", "tipo", "estado"},
+            {"sede_id", "tipo", "estado"},
+        )
+        site_id = positive_integer(payload["sede_id"], "sede_id")
+        machine_type = clean_text(payload["tipo"], "tipo", maximum=120)
+        state = clean_text(payload["estado"], "estado", maximum=30)
+        if state not in MACHINE_STATES:
+            raise ValueError("estado")
+    except ValueError as validation_error:
+        return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
+
+    connection = get_db()
+    site = connection.execute(
+        "SELECT nombre FROM sedes WHERE id_sede = ?", (site_id,)
+    ).fetchone()
+    if site is None:
+        return jsonify({"error": "site_not_found"}), 404
+    try:
+        cursor = connection.execute(
+            "INSERT INTO maquinas (sede_id, tipo, estado) VALUES (?, ?, ?)",
+            (site_id, machine_type, state),
+        )
+        connection.commit()
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return jsonify({"error": "machine_conflict"}), 409
+    return jsonify(
+        {
+            "machine": {
+                "id": cursor.lastrowid,
+                "sede_id": site_id,
+                "sede": site["nombre"],
+                "tipo": machine_type,
+                "estado": state,
+                "tickets_abiertos": 0,
+            }
+        }
+    ), 201
 
 
 @admin_api_blueprint.post("/activities")
@@ -538,6 +730,121 @@ def update_membership(membership_id):
     if cursor.rowcount != 1:
         return jsonify({"error": "membership_not_found"}), 404
     return jsonify({"membership": {"id": membership_id, **values}})
+
+
+def _benefit_values(payload, partial=False):
+    allowed = {"nombre", "descripcion"}
+    required = set() if partial else {"nombre"}
+    require_json_fields(payload, allowed, required)
+    if partial and not payload:
+        raise ValueError("request")
+    values = {}
+    if "nombre" in payload:
+        values["nombre"] = clean_text(payload["nombre"], "nombre", maximum=120)
+    if "descripcion" in payload:
+        values["descripcion"] = clean_text(
+            payload["descripcion"], "descripcion", maximum=1000, optional=True
+        )
+    if not partial:
+        values.setdefault("descripcion", None)
+    return values
+
+
+@admin_api_blueprint.post("/benefits")
+@admin_required
+def create_benefit():
+    if not csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    try:
+        values = _benefit_values(request.get_json(silent=True))
+    except ValueError as validation_error:
+        return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
+    connection = get_db()
+    try:
+        cursor = connection.execute(
+            "INSERT INTO beneficios (nombre, descripcion) VALUES (?, ?)",
+            (values["nombre"], values["descripcion"]),
+        )
+        connection.commit()
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return jsonify({"error": "benefit_conflict"}), 409
+    return jsonify({"benefit": {"id": cursor.lastrowid, **values}}), 201
+
+
+@admin_api_blueprint.patch("/benefits/<int:benefit_id>")
+@admin_required
+def update_benefit(benefit_id):
+    if not csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    try:
+        values = _benefit_values(request.get_json(silent=True), partial=True)
+    except ValueError as validation_error:
+        return jsonify({"error": "invalid_request", "field": str(validation_error)}), 400
+    assignments = ", ".join(f"{field} = ?" for field in values)
+    connection = get_db()
+    try:
+        cursor = connection.execute(
+            f"UPDATE beneficios SET {assignments} WHERE id_beneficio = ?",
+            (*values.values(), benefit_id),
+        )
+        connection.commit()
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return jsonify({"error": "benefit_conflict"}), 409
+    if cursor.rowcount != 1:
+        return jsonify({"error": "benefit_not_found"}), 404
+    return jsonify({"benefit": {"id": benefit_id, **values}})
+
+
+@admin_api_blueprint.put("/memberships/<int:membership_id>/benefits")
+@admin_required
+def replace_membership_benefits(membership_id):
+    if not csrf_is_valid():
+        return jsonify({"error": "csrf_failed"}), 400
+    payload = request.get_json(silent=True)
+    try:
+        require_json_fields(payload, {"benefit_ids"}, {"benefit_ids"})
+        benefit_ids = payload["benefit_ids"]
+        if not isinstance(benefit_ids, list):
+            raise ValueError("benefit_ids")
+        benefit_ids = [positive_integer(value, "benefit_ids") for value in benefit_ids]
+        if len(set(benefit_ids)) != len(benefit_ids):
+            raise ValueError("benefit_ids")
+    except ValueError as validation_error:
+        field = str(validation_error) if str(validation_error) else "benefit_ids"
+        return jsonify({"error": "invalid_request", "field": field}), 400
+
+    connection = get_db()
+    if connection.execute(
+        "SELECT 1 FROM membresias WHERE id_membresia = ?", (membership_id,)
+    ).fetchone() is None:
+        return jsonify({"error": "membership_not_found"}), 404
+    if benefit_ids:
+        placeholders = ",".join("?" for _ in benefit_ids)
+        found = connection.execute(
+            f"SELECT count(*) FROM beneficios WHERE id_beneficio IN ({placeholders})",
+            benefit_ids,
+        ).fetchone()[0]
+        if found != len(benefit_ids):
+            return jsonify({"error": "benefit_not_found"}), 404
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute(
+            "DELETE FROM membresia_beneficio WHERE membresia_id = ?",
+            (membership_id,),
+        )
+        connection.executemany(
+            "INSERT INTO membresia_beneficio (membresia_id, beneficio_id) VALUES (?, ?)",
+            ((membership_id, benefit_id) for benefit_id in benefit_ids),
+        )
+        connection.commit()
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return jsonify({"error": "membership_benefit_conflict"}), 409
+    return jsonify(
+        {"membership": {"id": membership_id, "benefit_ids": benefit_ids}}
+    )
 
 
 @admin_api_blueprint.get("/permissions")

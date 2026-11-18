@@ -8,6 +8,13 @@
 
 **Base anterior:** gimnasio.db queda fuera del diseño y no se migrará ni modificará.
 
+> **Nota de vigencia (2026-11-18):** este documento conserva la propuesta y los
+> acuerdos del Bloque 2. El estado actual avanzó más allá de las migraciones
+> 0001–0008 descritas aquí: existen migraciones hasta 0014, autenticación,
+> permisos y APIs por rol. Para el estado vigente consultar
+> `docs/ESTADO_ENTREGA.md` y `docs/GUIA_BACKEND_APIS.md`; las referencias de
+> implementación de este documento son históricas.
+
 Esta propuesta conserva las 15 decisiones arquitectónicas y los acuerdos complementarios aprobados en DECISIONES.md. Las Microtareas 1 a 3 incorporaron infraestructura, identidad, sedes, actividades, entrenadores y clases. La Microtarea 4 agrega clientes, inscripciones, asistencias y un servicio interno sin endpoints. Las Microtareas 5 y 6 agregan objetivos, rutinas, ejercicios, progreso y alimentación. La Microtarea 7 agrega el catálogo financiero y un servicio interno de registro, sin endpoints, pasarela de pago ni autorización real. La Microtarea 8 agrega perfiles de sede y mantenimiento. La Microtarea 9 completa las tablas principales con remuneraciones, sin pagos reales ni endpoints.
 
 ## Convenciones del esquema

@@ -1,8 +1,8 @@
-"""Vistas demostrativas Cliente servidas detrás de la sesión FitPath."""
+"""Vistas Cliente protegidas y compatibilidad con rutas anteriores."""
 
 from pathlib import Path
 
-from flask import Blueprint, abort, send_from_directory
+from flask import Blueprint, abort, redirect, send_from_directory, url_for
 
 from ..permissions import CLIENT_VIEWS_PERMISSION
 from .authorization import require_access
@@ -15,18 +15,35 @@ PUBLIC_STATICS = PROJECT_ROOT / "statics"
 
 CLIENT_VIEW_PATHS = (
     "inicio/resumen.html",
+    "inicio/actividad.html",
+    "inicio/proxima-clase.html",
     "clases/index.html",
+    "clases/detalle.html",
     "clases/reservas.html",
     "rutina/semana.html",
+    "rutina/entrenamiento.html",
+    "rutina/ejercicio.html",
     "progreso/index.html",
+    "progreso/evolucion.html",
+    "alimentacion/index.html",
+    "alimentacion/detalle.html",
     "perfil/index.html",
     "perfil/membresia.html",
 )
+
+CLIENT_VIEW_REDIRECTS = {}
 
 client_views_blueprint = Blueprint("client_views", __name__)
 
 
 def _send_client_view(filename):
+    redirect_target = CLIENT_VIEW_REDIRECTS.get(filename)
+    if redirect_target:
+        response = redirect(
+            url_for("client_views.client_view", filename=redirect_target)
+        )
+        response.headers["Cache-Control"] = "private, no-store"
+        return response
     if filename not in CLIENT_VIEW_PATHS:
         abort(404)
 
