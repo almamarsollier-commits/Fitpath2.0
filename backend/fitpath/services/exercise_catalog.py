@@ -1,12 +1,62 @@
-
 import requests
-
 
 WGER_API_URL = "https://wger.de/api/v2"
 
 
-def obtener_ejercicios(limite=20):
+def normalizar_ejercicio(ejercicio):
 
+    traducciones = ejercicio.get("translations", [])
+
+    traduccion = next(
+        (t for t in traducciones if t.get("language") == 4),
+        None
+    )
+
+    if traduccion is None:
+        traduccion = next(
+            (t for t in traducciones if t.get("language") == 2),
+            None
+        )
+
+    if traduccion is None and traducciones:
+        traduccion = traducciones[0]
+
+    if traduccion is None:
+        traduccion = {}
+
+    categoria = ejercicio.get("category") or {}
+
+    return {
+        "id": ejercicio.get("id"),
+        "nombre": traduccion.get("name") or "Sin nombre",
+        "descripcion": (
+            traduccion.get("description")
+            or traduccion.get("description_source")
+            or ""
+        ),
+        "categoria": categoria.get("name", "Sin categoría"),
+        "musculos": [
+            musculo.get("name")
+            for musculo in ejercicio.get("muscles", [])
+        ],
+        "equipamiento": [
+            elemento.get("name")
+            for elemento in ejercicio.get("equipment", [])
+        ],
+        "imagenes": [
+            imagen.get("image")
+            for imagen in ejercicio.get("images", [])
+            if imagen.get("image")
+        ],
+        "videos": [
+            video.get("video")
+            for video in ejercicio.get("videos", [])
+            if video.get("video")
+        ]
+    }
+
+
+def obtener_ejercicios(limite=20):
     url = f"{WGER_API_URL}/exerciseinfo/"
 
     parametros = {
@@ -25,35 +75,10 @@ def obtener_ejercicios(limite=20):
 
         datos = respuesta.json()
 
-        ejercicios = []
-
-        for ejercicio in datos.get("results", []):
-
-            ejercicios.append({
-                "id": ejercicio.get("id"),
-                "nombre": ejercicio.get("name") or "Sin nombre",
-                "descripcion": ejercicio.get("description") or "",
-                "categoria": (
-                    ejercicio.get("category", {}).get("name")
-                    if ejercicio.get("category")
-                    else "Sin categoría"
-                ),
-                "musculos": [
-                    musculo.get("name")
-                    for musculo in ejercicio.get("muscles", [])
-                ],
-                "equipamiento": [
-                    elemento.get("name")
-                    for elemento in ejercicio.get("equipment", [])
-                ],
-                "imagenes": [
-                    imagen.get("image")
-                    for imagen in ejercicio.get("images", [])
-                    if imagen.get("image")
-                ]
-            })
-
-        return ejercicios
+        return [
+            normalizar_ejercicio(ejercicio)
+            for ejercicio in datos.get("results", [])
+        ]
 
     except requests.RequestException as error:
         print(f"Error al consultar wger: {error}")
@@ -61,42 +86,15 @@ def obtener_ejercicios(limite=20):
 
 
 def obtener_ejercicio_por_id(ejercicio_id):
-
     url = f"{WGER_API_URL}/exerciseinfo/{ejercicio_id}/"
 
     try:
-        respuesta = requests.get(
-            url,
-            timeout=15
-        )
-
+        respuesta = requests.get(url, timeout=15)
         respuesta.raise_for_status()
 
         ejercicio = respuesta.json()
 
-        return {
-            "id": ejercicio.get("id"),
-            "nombre": ejercicio.get("name") or "Sin nombre",
-            "descripcion": ejercicio.get("description") or "",
-            "categoria": (
-                ejercicio.get("category", {}).get("name")
-                if ejercicio.get("category")
-                else "Sin categoría"
-            ),
-            "musculos": [
-                musculo.get("name")
-                for musculo in ejercicio.get("muscles", [])
-            ],
-            "equipamiento": [
-                elemento.get("name")
-                for elemento in ejercicio.get("equipment", [])
-            ],
-            "imagenes": [
-                imagen.get("image")
-                for imagen in ejercicio.get("images", [])
-                if imagen.get("image")
-            ]
-        }
+        return normalizar_ejercicio(ejercicio)
 
     except requests.RequestException as error:
         print(f"Error al obtener ejercicio: {error}")
