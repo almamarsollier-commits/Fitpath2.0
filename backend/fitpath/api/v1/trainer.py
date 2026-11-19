@@ -9,6 +9,10 @@ from ...auth.authorization import current_identity, require_api_access
 from ...database import get_db
 from ...permissions import TRAINER_DATA_PERMISSION
 from ...services.nutrition import get_nutrition_plan, list_nutrition_plans
+from ...services.exercise_catalog import (
+    obtener_ejercicios,
+    obtener_ejercicio_por_id,
+)
 from ...services.schedules import ScheduleValidationError, trainer_is_available
 from .role_utils import (
     bounded_integer,
