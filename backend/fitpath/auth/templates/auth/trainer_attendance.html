@@ -1,0 +1,40 @@
+<!doctype html>
+{% from "auth/_trainer_navigation.html" import trainer_sidebar %}
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0D0F10">
+  <meta name="description" content="Registro de asistencia para clases asignadas al Entrenador en FitPath.">
+  <title>Asistencias | FitPath 2.0</title>
+  <link rel="stylesheet" href="/statics/css/fitpath.css">
+  <script type="module" src="/statics/js/modules/trainer-attendance.js"></script>
+</head>
+<body class="fp-showcase fp-role-page fp-trainer-attendance" data-role-name="Entrenador">
+  <a class="cl-skip-link" href="#trainer-attendance-main">Saltar al contenido principal</a>
+  <div class="fp-app-shell">
+    {{ trainer_sidebar('attendance') }}
+    <button class="fp-drawer-overlay" type="button" aria-label="Cerrar menú" tabindex="-1" hidden data-menu-overlay></button>
+    <main class="fp-main" id="trainer-attendance-main" tabindex="-1">
+      <header class="fp-topbar">
+        <div class="fp-topbar-start">
+          <button class="fp-menu-toggle" type="button" aria-label="Abrir menú" aria-controls="fp-sidebar" aria-expanded="false" data-menu-toggle>☰</button>
+          <nav class="fp-breadcrumb" aria-label="Migas de pan"><a href="/auth/entrenador">Entrenador</a><span class="fp-breadcrumb-divider" aria-hidden="true">/</span><strong data-attendance-breadcrumb>Asistencias</strong></nav>
+        </div>
+        <div class="fp-topbar-end"><span class="fp-preview-pill"><span aria-hidden="true"></span> SQLite conectado</span><span class="fp-user-chip"><span class="fp-avatar" aria-hidden="true">FP</span><span data-role-user-name>Cargando…</span></span></div>
+      </header>
+      <div class="fp-page-container tr-attendance-page">
+        <a class="cl-back-link" href="/auth/entrenador" data-attendance-back>← Volver al resumen</a>
+        <header class="cl-view-heading" data-attendance-heading>
+          <span class="fp-section-kicker">ENTRENAMIENTO · ASISTENCIAS</span>
+          <h1>Asistencias</h1>
+          <p>Seleccioná una clase asignada y registrá únicamente la asistencia de sus alumnos inscriptos.</p>
+        </header>
+        <p class="tr-module-status" data-attendance-status data-state="loading" role="status" aria-live="polite">Cargando clases asignadas…</p>
+        <div data-attendance-content aria-busy="true"></div>
+        <footer class="fp-footer cl-footer"><span>FITPATH <strong>2.0</strong> · ENTRENADOR</span><span>Acceso protegido por rol, permiso y propiedad</span></footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

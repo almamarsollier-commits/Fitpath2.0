@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Vinculación pendiente | FitPath</title>
+  <link rel="stylesheet" href="{{ url_for('auth.static', filename='css/fitpath.css') }}">
+</head>
+<body class="auth-page">
+  <main class="auth-panel" style="min-height:100vh">
+    <section class="auth-card" aria-labelledby="title">
+      <span class="eyebrow">APROBACIÓN LOCAL REQUERIDA</span>
+      <h1 id="title">Tu acceso todavía no está vinculado.</h1>
+      <p>Compartí esta referencia con el administrador de FitPath para que la vincule localmente a tu usuario existente.</p>
+      <p><strong>Referencia de un solo uso:</strong></p>
+      <p><code>{{ reference }}</code></p>
+      <p class="form-note">Vence: {{ expires }} UTC. No compartas esta referencia públicamente.</p>
+      <a class="button button-primary button-full" href="{{ url_for('auth.login_page') }}">Volver al acceso</a>
+    </section>
+  </main>
+</body>
+</html>

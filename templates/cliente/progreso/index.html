@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0D0F10">
+  <meta name="description" content="Registro de progreso del Cliente de FitPath.">
+  <title>Progreso | FitPath 2.0</title>
+  <link rel="stylesheet" href="/statics/css/fitpath.css">
+  <script type="module" src="/statics/js/modules/cliente-shell.js"></script>
+</head>
+<body class="fp-showcase fp-client-page" data-client-view="progreso-inicio">
+  <a class="cl-skip-link" href="#client-main">Saltar al contenido principal</a>
+  <div class="fp-app-shell">
+    <aside class="fp-sidebar" id="fp-sidebar" aria-label="Navegación del espacio Cliente"></aside>
+    <button class="fp-drawer-overlay" type="button" aria-label="Cerrar menú" tabindex="-1" hidden data-menu-overlay></button>
+    <main class="fp-main" id="client-main" tabindex="-1">
+      <header class="fp-topbar"><div class="fp-topbar-start"><button class="fp-menu-toggle" type="button" aria-label="Abrir menú" aria-controls="fp-sidebar" aria-expanded="false" data-menu-toggle><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><nav class="fp-breadcrumb" id="client-breadcrumb-mount" aria-label="Migas de pan"></nav></div><div class="fp-topbar-end"><span class="fp-preview-pill"><span aria-hidden="true"></span> Seguimiento privado</span><span class="fp-user-chip"><span class="fp-avatar" aria-hidden="true">FP</span><span data-demo-text="profile.name">Cargando…</span></span></div></header>
+      <div class="fp-page-container cl-page-container" data-client-progress-root>
+        <p class="cl-demo-banner" role="status">Tus métricas se guardan en tu historial privado. Ingresá solo datos que quieras conservar.</p>
+        <header class="cl-view-heading"><span class="fp-section-kicker">TU EVOLUCIÓN</span><h1>Progreso</h1><p>Registrá una medición u observación y consultá su historial.</p></header>
+        <div class="cl-page-actions"><a class="cl-text-action" href="/templates/cliente/progreso/evolucion.html">Ver estadísticas y gráficos <span aria-hidden="true">↗</span></a></div>
+        <div class="cl-profile-layout"><section class="fp-card cl-profile-editor"><h2>Nuevo registro</h2><form class="cl-progress-form" data-client-progress-form><div class="cl-form-grid"><label>Peso (kg)<input name="peso_kg" type="number" min="20" max="400" step="0.01"></label><label>Grasa corporal (%)<input name="porcentaje_grasa" type="number" min="0" max="100" step="0.01"></label><label class="cl-form-wide">Rendimiento en ejercicios<textarea name="rendimiento_ejercicios" rows="3" maxlength="1000" placeholder="Ej.: Sentadilla 3 × 10 con 20 kg"></textarea></label><label class="cl-form-wide">Observaciones<textarea name="observaciones" rows="3" maxlength="1000"></textarea></label></div><button class="fp-button fp-button-primary" type="submit">Registrar progreso</button></form></section><aside><p class="cl-payment-page-status" data-client-data-status role="status" aria-live="polite">Cargando historial…</p><div class="cl-history-list" data-client-progress-list></div></aside></div>
+        <footer class="fp-footer cl-footer"><span>FITPATH <strong>2.0</strong> · ESPACIO CLIENTE</span><span>Historial privado</span></footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>RUNNING</title></head>
+<body>
+  <pre id="result">RUNNING</pre>
+  <script src="../../statics/js/assistant/text-utils.js"></script>
+  <script src="../../statics/js/assistant/knowledge-base.js"></script>
+  <script src="../../statics/js/assistant/intent-engine.js"></script>
+  <script src="../../statics/js/assistant/fitpath-client.js"></script>
+  <script src="../../statics/js/assistant/conversation-engine.js"></script>
+  <script>
+    (async () => {
+      const output = document.querySelector("#result");
+      const { ConversationEngine, FitPathClient } = FitPathAssistant;
+      const assert = (condition, label) => { if (!condition) throw new Error(label); };
+      const includes = (value, pattern, label) => assert(pattern.test(value), label);
+      const offline = new ConversationEngine({ client: new FitPathClient({ offline: true }) });
+
+      includes((await offline.respond("nutricon deportiva")).message, /alimentaci[oó]n|rendimiento/i, "nutrición");
+      includes((await offline.respond("ganar fuerzza")).message, /fuerza|cargas progresivas/i, "fuerza");
+      includes((await offline.respond("descanzo entre serires")).message, /descans|series/i, "ortografía");
+      await offline.respond("hipertrofia");
+      includes((await offline.respond("y cuanto descanso")).message, /descans|series/i, "seguimiento");
+      await offline.respond("proteinas");
+      includes((await offline.respond("ahora cardio")).message, /cardio|resistencia/i, "cambio de tema");
+      includes((await offline.respond("calibrar antena satelital")).message, /fuera|contexto|preguntarme/i, "desconocida");
+      assert((await offline.respond("ver clases")).backendAvailable === false, "backend desconectado");
+
+      const calls = [];
+      const enrollment = new ConversationEngine({ client: { perform: async (operation, parameters) => {
+        calls.push({ operation, parameters });
+        return { ok: false, reason: "unsupported_operation" };
+      } } });
+      assert((await enrollment.respond("inscribirme a la clase 12")).confirmationRequired === true, "confirmación inscripción");
+      assert(calls.length === 0, "no ejecutar antes de confirmar");
+      await enrollment.respond("confirmar");
+      assert(calls[0].operation === "enrollments.create" && calls[0].parameters.id === 12, "ejecutar confirmada");
+
+      const denied = new ConversationEngine({ client: { perform: async () => ({ ok: false, reason: "permission_denied" }) } });
+      includes((await denied.respond("ver mi progreso")).message, /no tiene permiso/i, "permiso denegado");
+      assert((await offline.respond("ir a mi rutina")).actions[0].href.includes("/rutina/"), "navegación");
+      includes((await offline.respond("dolor de pecho al entrenar")).message, /atenci[oó]n profesional/i, "seguridad");
+      includes((await offline.respond("fuerza e hipertrofia")).message, /puede referirse/i, "ambigüedad");
+
+      document.title = "PASS";
+      output.textContent = "PASS: 13 escenarios del asistente portable";
+    })().catch((error) => {
+      document.title = "FAIL";
+      document.querySelector("#result").textContent = `FAIL: ${error.message}`;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Administrá tus datos personales de FitPath.">
+  <title>FitPath | Mi perfil</title>
+  <link rel="stylesheet" href="../statics/css/fitpath.css">
+  <script src="../statics/js/fitpath.js" defer></script>
+</head>
+<body data-page="app">
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="inicio.html"><span class="brand-mark">f</span><span>fitpath<span class="brand-dot">.</span></span></a>
+      <div class="side-label">MENÚ PRINCIPAL</div>
+      <nav class="side-nav" aria-label="Navegación principal">
+        <a class="nav-link" href="inicio.html"><span class="nav-icon">⌂</span> Inicio</a>
+        <a class="nav-link" href="buscador.html"><span class="nav-icon">⌕</span> Actividades</a>
+        <a class="nav-link is-current" href="perfil.html"><span class="nav-icon">◉</span> Mi perfil</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-tip"><span class="tip-icon">✳</span><strong>Un recordatorio</strong><p>El progreso no es lineal. Seguí a tu ritmo.</p></div>
+        <button class="nav-link logout-button" type="button" data-logout><span class="nav-icon">↪</span> Cerrar sesión</button>
+        <div class="side-version">FITPATH · BASE 2.0</div>
+      </div>
+    </aside>
+    <div class="mobile-overlay" data-close-menu></div>
+    <main class="main-content">
+      <header class="topbar"><button class="menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle>☰</button><div class="breadcrumb">Tu espacio <span>/</span> <strong>Mi perfil</strong></div><a class="topbar-profile" href="perfil.html"><span class="avatar" data-avatar>U</span><span data-user-name>Tu perfil</span><span class="chevron">⌄</span></a></header>
+      <div class="page-wrap">
+        <section class="page-intro"><span class="eyebrow">TU ESPACIO PERSONAL</span><h1>Mi perfil<span class="brand-dot">.</span></h1><p>Estos son tus datos. Podés actualizarlos cuando lo necesites.</p></section>
+        <section class="profile-layout">
+          <aside class="profile-summary"><div class="profile-avatar" data-profile-avatar>U</div><h2 data-profile-name>Tu nombre</h2><p data-profile-email>tu@correo.com</p><span class="member-label"><span class="status-dot"></span> Miembro FitPath</span><div class="profile-summary-line"></div><p class="profile-summary-note">Tu perfil es el punto de partida para personalizar tu experiencia.</p></aside>
+          <section class="profile-form-card"><div class="card-heading"><div><span class="eyebrow">INFORMACIÓN PERSONAL</span><h2>Datos de tu cuenta</h2></div><span class="edit-icon">✎</span></div>
+            <form id="profile-form" class="profile-form">
+              <div class="form-row"><div class="search-field"><label for="profile-name">Nombre y apellido</label><input id="profile-name" name="name" type="text" minlength="2" required></div><div class="search-field"><label for="profile-email">Correo electrónico</label><input id="profile-email" name="email" type="email" required></div></div>
+              <div class="search-field"><label for="profile-goal">¿Qué te gustaría priorizar?</label><select id="profile-goal" name="goal"><option value="Bienestar general">Bienestar general</option><option value="Mejorar resistencia">Mejorar resistencia</option><option value="Ganar fuerza">Ganar fuerza</option><option value="Movilidad y flexibilidad">Movilidad y flexibilidad</option><option value="Disfrutar el movimiento">Disfrutar el movimiento</option></select></div>
+              <div class="form-actions"><p class="form-message" id="profile-message" role="status" aria-live="polite"></p><button class="button button-primary" type="submit">Guardar cambios <span>→</span></button></div>
+            </form>
+          </section>
+        </section>
+        <footer class="app-footer">FitPath <span>·</span> Bienestar en movimiento</footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

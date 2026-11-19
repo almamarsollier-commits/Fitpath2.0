@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0D0F10">
+  <meta name="description" content="Próxima clase reservada por el Cliente de FitPath.">
+  <title>Próxima clase | FitPath 2.0</title>
+  <link rel="stylesheet" href="/statics/css/fitpath.css">
+  <script type="module" src="/statics/js/modules/cliente-shell.js"></script>
+</head>
+<body class="fp-showcase fp-client-page" data-client-view="inicio-proxima-clase">
+  <a class="cl-skip-link" href="#client-main">Saltar al contenido principal</a>
+  <div class="fp-app-shell">
+    <aside class="fp-sidebar" id="fp-sidebar" aria-label="Navegación del espacio Cliente"></aside>
+    <button class="fp-drawer-overlay" type="button" aria-label="Cerrar menú" tabindex="-1" hidden data-menu-overlay></button>
+    <main class="fp-main" id="client-main" tabindex="-1">
+      <header class="fp-topbar"><div class="fp-topbar-start"><button class="fp-menu-toggle" type="button" aria-label="Abrir menú" aria-controls="fp-sidebar" aria-expanded="false" data-menu-toggle><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><nav class="fp-breadcrumb" id="client-breadcrumb-mount" aria-label="Migas de pan"></nav></div><div class="fp-topbar-end"><span class="fp-preview-pill"><span aria-hidden="true"></span> Reserva propia</span><span class="fp-user-chip"><span class="fp-avatar" aria-hidden="true">FP</span><span data-demo-text="profile.name">Cargando…</span></span></div></header>
+      <div class="fp-page-container cl-page-container" data-client-next-class-root>
+        <p class="cl-demo-banner" role="status">Tu siguiente inscripción activa, consultada desde FitPath.</p>
+        <a class="cl-back-link" href="/templates/cliente/inicio/resumen.html">← Volver al Inicio</a>
+        <header class="cl-view-heading"><span class="fp-section-kicker">PRÓXIMA CLASE</span><h1 data-class-title>Cargando reserva…</h1><p data-class-lead>Consultando tu agenda personal.</p></header>
+        <p class="cl-payment-page-status" data-client-data-status role="status" aria-live="polite">Cargando información…</p>
+        <div data-class-detail></div>
+        <div class="cl-inline-links"><a href="/templates/cliente/clases/index.html">Explorar clases</a><a href="/templates/cliente/clases/reservas.html">Ver historial de inscripciones</a></div>
+        <footer class="fp-footer cl-footer"><span>FITPATH <strong>2.0</strong> · ESPACIO CLIENTE</span><span>Agenda personal protegida</span></footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

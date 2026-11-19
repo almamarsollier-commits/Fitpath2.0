@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0D0F10">
+  <meta name="description" content="Perfil personal editable del Cliente de FitPath.">
+  <title>Mi perfil | FitPath 2.0</title>
+  <link rel="stylesheet" href="/statics/css/fitpath.css">
+  <script type="module" src="/statics/js/modules/cliente-shell.js"></script>
+</head>
+<body class="fp-showcase fp-client-page" data-client-view="perfil-inicio">
+  <a class="cl-skip-link" href="#client-main">Saltar al contenido principal</a>
+  <div class="fp-app-shell">
+    <aside class="fp-sidebar" id="fp-sidebar" aria-label="Navegación del espacio Cliente">
+      <noscript><a href="/templates/landing.html">FitPath público</a></noscript>
+    </aside>
+    <button class="fp-drawer-overlay" type="button" aria-label="Cerrar menú" tabindex="-1" hidden data-menu-overlay></button>
+    <main class="fp-main" id="client-main" tabindex="-1">
+      <header class="fp-topbar">
+        <div class="fp-topbar-start">
+          <button class="fp-menu-toggle" type="button" aria-label="Abrir menú" aria-controls="fp-sidebar" aria-expanded="false" data-menu-toggle>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <nav class="fp-breadcrumb" id="client-breadcrumb-mount" aria-label="Migas de pan"></nav>
+        </div>
+        <div class="fp-topbar-end">
+          <span class="fp-preview-pill"><span aria-hidden="true"></span> Perfil privado</span>
+          <span class="fp-user-chip"><span class="fp-avatar" aria-hidden="true">FP</span><span data-demo-text="profile.name">Cargando…</span></span>
+        </div>
+      </header>
+
+      <div class="fp-page-container cl-page-container" data-account-profile-root>
+        <p class="cl-demo-banner" role="status">Perfil personal autenticado. El email y el rol son datos protegidos y no se modifican desde esta pantalla.</p>
+        <a class="cl-back-link" href="/templates/cliente/inicio/resumen.html">← Volver al Inicio</a>
+        <header class="cl-view-heading">
+          <span class="fp-section-kicker">TU ESPACIO PERSONAL</span>
+          <h1>Mi perfil</h1>
+          <p>Actualizá tus datos permitidos, preferencias y objetivos de entrenamiento.</p>
+        </header>
+
+        <section class="fp-card cl-profile-overview" aria-labelledby="profile-display-name">
+          <span class="cl-profile-avatar" aria-hidden="true">FP</span>
+          <div>
+            <span class="fp-section-kicker">TU PERFIL</span>
+            <h2 id="profile-display-name" data-profile-display-name>Cargando perfil…</h2>
+            <p data-profile-display-bio>Agregá una biografía breve para personalizar tu espacio.</p>
+          </div>
+          <span class="fp-status fp-status-upcoming">Cliente</span>
+        </section>
+
+        <div class="cl-profile-layout">
+          <section class="fp-card cl-profile-editor" aria-labelledby="profile-form-title">
+            <div class="cl-section-heading">
+              <div><span class="fp-section-kicker">DATOS PERSONALES</span><h2 id="profile-form-title">Editar perfil</h2></div>
+            </div>
+            <form data-account-profile-form novalidate>
+              <div class="cl-form-grid">
+                <label>Nombre
+                  <input name="nombre" type="text" autocomplete="given-name" minlength="1" maxlength="80" required>
+                </label>
+                <label>Apellido
+                  <input name="apellido" type="text" autocomplete="family-name" minlength="1" maxlength="80" required>
+                </label>
+                <label>Nombre de usuario
+                  <input name="nombre_usuario" type="text" autocomplete="username" minlength="3" maxlength="30" pattern="[a-z0-9][a-z0-9._-]{1,28}[a-z0-9]" required aria-describedby="username-help">
+                  <small id="username-help">Minúsculas, números, punto, guion o guion bajo.</small>
+                </label>
+                <label>Teléfono
+                  <input name="telefono" type="tel" autocomplete="tel" maxlength="25" placeholder="+54 11 5555-1212">
+                </label>
+                <label class="cl-form-wide">Email de autenticación
+                  <input name="email" type="email" autocomplete="email" readonly aria-describedby="email-help">
+                  <small id="email-help">Para cambiarlo se requiere un proceso de verificación separado.</small>
+                </label>
+                <label class="cl-form-wide">Biografía
+                  <textarea name="biografia" rows="4" maxlength="500" placeholder="Contanos brevemente qué te motiva a entrenar."></textarea>
+                  <small><span data-bio-count>0</span>/500 caracteres</small>
+                </label>
+              </div>
+
+              <fieldset class="cl-profile-fieldset" data-profile-objective-fieldset>
+                <legend>Preferencias</legend>
+                <label>Tema
+                  <select name="tema">
+                    <option value="sistema">Usar configuración del sistema</option>
+                    <option value="claro">Claro</option>
+                    <option value="oscuro">Oscuro</option>
+                  </select>
+                </label>
+                <label class="cl-check-option"><input name="movimiento_reducido" type="checkbox"> Reducir animaciones</label>
+                <label class="cl-check-option"><input name="recordatorios_clase" type="checkbox"> Recibir recordatorios de clases</label>
+              </fieldset>
+
+              <fieldset class="cl-profile-fieldset">
+                <legend>Objetivos generales</legend>
+                <p>Elegí hasta 10 objetivos disponibles en FitPath.</p>
+                <div class="cl-objective-options" data-profile-objectives><span>Cargando objetivos…</span></div>
+              </fieldset>
+
+              <div class="cl-form-actions">
+                <p data-profile-form-status role="status" aria-live="polite">Los cambios se guardan en tu perfil privado.</p>
+                <button class="fp-button fp-button-primary" type="submit">Guardar cambios</button>
+              </div>
+            </form>
+          </section>
+
+          <aside class="fp-card cl-action-card cl-profile-photo-card">
+            <span class="fp-section-kicker">FOTO DE PERFIL</span>
+            <h2>Actualizá tu imagen</h2>
+            <p>La imagen se guarda en un bucket privado y se recupera mediante un enlace temporal.</p>
+            <form class="cl-profile-image-form" enctype="multipart/form-data" data-profile-image-form>
+              <label for="profile-image">Imagen JPEG, PNG o WebP</label>
+              <input id="profile-image" name="image" type="file" accept="image/jpeg,image/png,image/webp" required>
+              <button class="fp-button fp-button-primary" type="submit">Guardar foto</button>
+            </form>
+            <small class="cl-note" data-profile-image-status role="status" aria-live="polite">Tamaño máximo: 5 MiB.</small>
+            <a class="fp-button fp-button-outline" href="/templates/cliente/perfil/membresia.html">Ver membresía y pagos</a>
+          </aside>
+        </div>
+
+        <footer class="fp-footer cl-footer"><span>FITPATH <strong>2.0</strong> · ESPACIO CLIENTE</span><span>Perfil privado · cambios protegidos por sesión</span></footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
